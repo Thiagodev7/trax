@@ -1,0 +1,38 @@
+{
+  "name": "trax",
+  "version": "0.1.0",
+  "description": "Trax — White-Label Marketing Reports Portal (Monorepo)",
+  "private": true,
+  "workspaces": [
+    "trax-api"
+  ],
+  "scripts": {
+    "setup": "npm run setup:api && npm run setup:web",
+    "setup:api": "cd trax-api && npm install",
+    "setup:web": "cd trax-web && flutter pub get",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd trax-api && npm run start:dev",
+    "dev:web": "cd trax-web && flutter run -d chrome --web-port 3001",
+    "db:start": "docker-compose up -d postgres",
+    "db:stop": "docker-compose stop postgres",
+    "db:migrate": "cd trax-api && npx prisma migrate dev",
+    "db:migrate:deploy": "cd trax-api && npx prisma migrate deploy",
+    "db:seed": "cd trax-api && npx prisma db seed",
+    "db:studio": "cd trax-api && npx prisma studio",
+    "db:reset": "cd trax-api && npx prisma migrate reset",
+    "db:generate": "cd trax-api && npx prisma generate",
+    "infra:up": "docker-compose up -d",
+    "infra:down": "docker-compose down",
+    "infra:down:volumes": "docker-compose down -v",
+    "test:api": "cd trax-api && npm test",
+    "test:api:cov": "cd trax-api && npm run test:cov",
+    "test:web": "cd trax-web && flutter test",
+    "lint:api": "cd trax-api && npm run lint",
+    "lint:web": "cd trax-web && flutter analyze",
+    "build:api": "cd trax-api && npm run build",
+    "build:web": "cd trax-web && flutter build web --release --web-renderer canvaskit"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

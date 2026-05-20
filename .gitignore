@@ -1,0 +1,56 @@
+# =============================================================================
+# TRAX — .gitignore global
+# =============================================================================
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# NestJS
+trax-api/dist/
+trax-api/.swc/
+
+# Flutter / Dart
+trax-web/.dart_tool/
+trax-web/.flutter-plugins
+trax-web/.flutter-plugins-dependencies
+trax-web/.packages
+trax-web/build/
+trax-web/pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.DS_Store
+
+# Docker volumes (se montar localmente)
+.docker/
+
+# Coverage
+coverage/
+lcov.info
+
+# Prisma (gerado)
+trax-api/src/generated/
+
+# OS
+Thumbs.db
