@@ -10,11 +10,18 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { useApiClient } from '@/lib/api-client-browser'
 
+const optionalUrl = (message: string) =>
+  z
+    .string()
+    .trim()
+    .refine((v) => !v || z.string().url().safeParse(v).success, { message })
+    .transform((v) => (v === '' ? undefined : v))
+
 const schema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
-  website: z.string().url('URL inválida. Inclua https://').optional().or(z.literal('')),
-  logoUrl: z.string().url('URL inválida').optional().or(z.literal('')),
+  website: optionalUrl('URL inválida. Inclua https://'),
+  logoUrl: optionalUrl('URL inválida. Inclua https://'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -55,10 +62,20 @@ export function ClientForm({ initialData, mode = 'create' }: ClientFormProps) {
   async function onSubmit(data: FormData) {
     try {
       if (isEditing) {
-        await api.patch(`/clients/${initialData!.id}`, data)
+        await api.patch(`/clients/${initialData!.id}`, {
+          name: data.name,
+          email: data.email,
+          website: data.website ?? null,
+          logoUrl: data.logoUrl ?? null,
+        })
         toast.success('Cliente atualizado com sucesso!')
       } else {
-        await api.post('/clients', data)
+        await api.post('/clients', {
+          name: data.name,
+          email: data.email,
+          ...(data.website ? { website: data.website } : {}),
+          ...(data.logoUrl ? { logoUrl: data.logoUrl } : {}),
+        })
         toast.success('Cliente cadastrado com sucesso!')
       }
 

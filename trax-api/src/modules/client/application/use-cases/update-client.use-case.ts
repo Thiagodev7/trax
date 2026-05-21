@@ -18,8 +18,8 @@ export class UpdateClientUseCase {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.email !== undefined && { email: dto.email }),
-        ...(dto.website !== undefined && { website: dto.website }),
-        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+        ...('website' in dto && { website: dto.website ?? null }),
+        ...('logoUrl' in dto && { logoUrl: dto.logoUrl ?? null }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
       select: {
