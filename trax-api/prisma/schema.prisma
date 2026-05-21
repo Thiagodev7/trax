@@ -16,10 +16,18 @@ datasource db {
 // ENUMS
 // ---------------------------------------------------------------------------
 
+enum AgencyPlan {
+  TRIAL
+  STARTER
+  PRO
+  AGENCY
+  ENTERPRISE
+}
+
 enum UserRole {
-  AGENCY_ADMIN   // Administrador da agência (acesso total)
-  AGENCY_VIEWER  // Visualizador da agência (somente leitura)
-  CLIENT_VIEWER  // Visualizador de cliente(s) específico(s)
+  AGENCY_ADMIN // Administrador da agência (acesso total)
+  AGENCY_VIEWER // Visualizador da agência (somente leitura)
+  CLIENT_VIEWER // Visualizador de cliente(s) específico(s)
 }
 
 enum IntegrationProvider {
@@ -48,25 +56,37 @@ enum ReportStatus {
 // AGENCY — O tenant raiz. Cada agência é isolada.
 // ---------------------------------------------------------------------------
 model Agency {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @db.VarChar(255)
-  slug          String   @unique @db.VarChar(100) // subdomínio: slug.trax.app
-  customDomain  String?  @unique @db.VarChar(255) // domínio próprio: relatorios.agencia.com
-  logoUrl       String?  @db.VarChar(1024)
-  faviconUrl    String?  @db.VarChar(1024)
-  primaryColor  String   @default("#6366F1") @db.VarChar(7)  // Hex #RRGGBB
-  secondaryColor String  @default("#818CF8") @db.VarChar(7)
-  accentColor   String   @default("#F59E0B") @db.VarChar(7)
-  fontFamily    String   @default("Inter") @db.VarChar(100)
-  isActive      Boolean  @default(true)
-  trialEndsAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                   String     @id @default(uuid()) @db.Uuid
+  name                 String     @db.VarChar(255)
+  slug                 String     @unique @db.VarChar(100) // subdomínio: slug.trax.app
+  customDomain         String?    @unique @db.VarChar(255) // domínio próprio: relatorios.agencia.com
+  logoUrl              String?    @db.VarChar(1024)
+  faviconUrl           String?    @db.VarChar(1024)
+  primaryColor         String     @default("#6366F1") @db.VarChar(7) // Hex #RRGGBB
+  secondaryColor       String     @default("#818CF8") @db.VarChar(7)
+  accentColor          String     @default("#F59E0B") @db.VarChar(7)
+  fontFamily           String     @default("Inter") @db.VarChar(100)
+  // Billing & Planos
+  plan                 AgencyPlan @default(TRIAL)
+  stripeCustomerId     String?    @unique @db.VarChar(255)
+  stripeSubscriptionId String?    @unique @db.VarChar(255)
+  maxClients           Int        @default(2)
+  maxUsers             Int        @default(1)
+  trialEndsAt          DateTime?
+
+  // Personalização avançada
+  customCss    String? @db.Text
+  supportEmail String? @db.VarChar(255)
+  reportFooter String? @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  clients       Client[]
-  users         User[]
-  reports       Report[]
+  clients Client[]
+  users   User[]
+  reports Report[]
 
   @@map("agencies")
 }
@@ -75,21 +95,21 @@ model Agency {
 // CLIENT — Clientes da agência. Isolados por agencyId.
 // ---------------------------------------------------------------------------
 model Client {
-  id          String   @id @default(uuid()) @db.Uuid
-  agencyId    String   @db.Uuid
-  name        String   @db.VarChar(255)
-  email       String?  @db.VarChar(255)
-  website     String?  @db.VarChar(512)
-  logoUrl     String?  @db.VarChar(1024)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  agencyId  String   @db.Uuid
+  name      String   @db.VarChar(255)
+  email     String?  @db.VarChar(255)
+  website   String?  @db.VarChar(512)
+  logoUrl   String?  @db.VarChar(1024)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  agency      Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency       Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   integrations Integration[]
-  reports     Report[]
-  userClients UserClient[]
+  reports      Report[]
+  userClients  UserClient[]
 
   @@index([agencyId])
   @@index([agencyId, isActive])
@@ -100,23 +120,23 @@ model Client {
 // USER — Autenticação. Vinculado a uma agência.
 // ---------------------------------------------------------------------------
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  agencyId       String    @db.Uuid
-  email          String    @db.VarChar(255)
-  passwordHash   String    @db.VarChar(255)
-  name           String    @db.VarChar(255)
-  role           UserRole  @default(CLIENT_VIEWER)
-  avatarUrl      String?   @db.VarChar(1024)
-  isActive       Boolean   @default(true)
-  lastLoginAt    DateTime?
+  id              String    @id @default(uuid()) @db.Uuid
+  agencyId        String    @db.Uuid
+  email           String    @db.VarChar(255)
+  passwordHash    String    @db.VarChar(255)
+  name            String    @db.VarChar(255)
+  role            UserRole  @default(CLIENT_VIEWER)
+  avatarUrl       String?   @db.VarChar(1024)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
   emailVerifiedAt DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  agency         Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  refreshTokens  RefreshToken[]
-  userClients    UserClient[]  // Clientes que o usuário pode visualizar
+  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  userClients   UserClient[] // Clientes que o usuário pode visualizar
 
   // Email único POR AGÊNCIA (não global — mesma pessoa pode ser user em 2 agências)
   @@unique([agencyId, email])
@@ -129,12 +149,12 @@ model User {
 // USER_CLIENT — Relação N:N entre User CLIENT_VIEWER e seus clientes visíveis
 // ---------------------------------------------------------------------------
 model UserClient {
-  userId    String @db.Uuid
-  clientId  String @db.Uuid
-  agencyId  String @db.Uuid // Denormalizado para queries multi-tenant eficientes
+  userId   String @db.Uuid
+  clientId String @db.Uuid
+  agencyId String @db.Uuid // Denormalizado para queries multi-tenant eficientes
 
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@id([userId, clientId])
   @@index([agencyId, userId])
@@ -145,16 +165,16 @@ model UserClient {
 // REFRESH TOKEN — Tokens de refresh com revogação individual
 // ---------------------------------------------------------------------------
 model RefreshToken {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  tokenHash   String   @unique @db.VarChar(255) // SHA-256 do token
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  ipAddress   String?  @db.VarChar(45)
-  userAgent   String?  @db.VarChar(512)
-  createdAt   DateTime @default(now())
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique @db.VarChar(255) // SHA-256 do token
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?   @db.VarChar(45)
+  userAgent String?   @db.VarChar(512)
+  createdAt DateTime  @default(now())
 
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -180,8 +200,8 @@ model Integration {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  reports   ReportIntegration[]
+  client  Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reports ReportIntegration[]
 
   @@unique([clientId, provider, externalAccount])
   @@index([agencyId, clientId])
@@ -193,23 +213,23 @@ model Integration {
 // REPORT — Relatório publicado / compartilhado com o cliente
 // ---------------------------------------------------------------------------
 model Report {
-  id          String       @id @default(uuid()) @db.Uuid
-  agencyId    String       @db.Uuid
-  clientId    String       @db.Uuid
-  title       String       @db.VarChar(255)
-  description String?      @db.Text
-  status      ReportStatus @default(DRAFT)
-  shareToken  String?      @unique @db.VarChar(64) // Token para acesso público sem login
+  id             String       @id @default(uuid()) @db.Uuid
+  agencyId       String       @db.Uuid
+  clientId       String       @db.Uuid
+  title          String       @db.VarChar(255)
+  description    String?      @db.Text
+  status         ReportStatus @default(DRAFT)
+  shareToken     String?      @unique @db.VarChar(64) // Token para acesso público sem login
   shareExpiresAt DateTime?
-  periodStart DateTime?    @db.Date
-  periodEnd   DateTime?    @db.Date
-  layoutJson  Json?        // Configuração dos blocos/widgets do relatório
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  publishedAt DateTime?
+  periodStart    DateTime?    @db.Date
+  periodEnd      DateTime?    @db.Date
+  layoutJson     Json? // Configuração dos blocos/widgets do relatório
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  publishedAt    DateTime?
 
-  agency      Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agency       Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client       Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
   integrations ReportIntegration[]
 
   @@index([agencyId, clientId])

@@ -4,6 +4,7 @@ import { ListClientsUseCase } from './application/use-cases/list-clients.use-cas
 import { CreateClientUseCase } from './application/use-cases/create-client.use-case';
 import { GetClientUseCase } from './application/use-cases/get-client.use-case';
 import { UpdateClientUseCase } from './application/use-cases/update-client.use-case';
+import { DeleteClientUseCase } from './application/use-cases/delete-client.use-case';
 
 @Module({
   controllers: [ClientController],
@@ -12,6 +13,7 @@ import { UpdateClientUseCase } from './application/use-cases/update-client.use-c
     CreateClientUseCase,
     GetClientUseCase,
     UpdateClientUseCase,
+    DeleteClientUseCase,
   ],
 })
 export class ClientModule {}

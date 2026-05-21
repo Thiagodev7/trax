@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   ParseUUIDPipe,
@@ -22,6 +23,7 @@ import { ListReportsUseCase } from '../application/use-cases/list-reports.use-ca
 import { GetReportUseCase } from '../application/use-cases/get-report.use-case';
 import { CreateReportUseCase } from '../application/use-cases/create-report.use-case';
 import { PublishReportUseCase } from '../application/use-cases/publish-report.use-case';
+import { DeleteReportUseCase } from '../application/use-cases/delete-report.use-case';
 
 @ApiTags('Reports')
 @Controller('reports')
@@ -31,6 +33,7 @@ export class ReportController {
     private readonly getReport: GetReportUseCase,
     private readonly createReport: CreateReportUseCase,
     private readonly publishReport: PublishReportUseCase,
+    private readonly deleteReport: DeleteReportUseCase,
   ) {}
 
   @ApiBearerAuth()
@@ -97,5 +100,19 @@ export class ReportController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.publishReport.execute(agencyId, id);
+  }
+
+  @ApiBearerAuth()
+  @Delete(':id')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Exclui relatório (somente AGENCY_ADMIN)' })
+  async remove(
+    @CurrentTenant('agencyId') agencyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.deleteReport.execute({ agencyId, reportId: id, user });
   }
 }

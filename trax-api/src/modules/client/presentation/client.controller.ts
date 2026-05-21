@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   ParseUUIDPipe,
@@ -22,6 +23,7 @@ import { ListClientsUseCase } from '../application/use-cases/list-clients.use-ca
 import { CreateClientUseCase } from '../application/use-cases/create-client.use-case';
 import { GetClientUseCase } from '../application/use-cases/get-client.use-case';
 import { UpdateClientUseCase } from '../application/use-cases/update-client.use-case';
+import { DeleteClientUseCase } from '../application/use-cases/delete-client.use-case';
 
 @ApiBearerAuth()
 @ApiTags('Clients')
@@ -32,6 +34,7 @@ export class ClientController {
     private readonly createClient: CreateClientUseCase,
     private readonly getClient: GetClientUseCase,
     private readonly updateClient: UpdateClientUseCase,
+    private readonly deleteClient: DeleteClientUseCase,
   ) {}
 
   @Get()
@@ -83,5 +86,17 @@ export class ClientController {
     @Body() dto: UpdateClientDto,
   ) {
     return this.updateClient.execute(agencyId, id, dto);
+  }
+
+  @Delete(':id')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desativa cliente (soft-delete, somente AGENCY_ADMIN)' })
+  async remove(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.deleteClient.execute(agencyId, id);
   }
 }

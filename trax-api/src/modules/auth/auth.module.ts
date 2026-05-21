@@ -6,6 +6,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './presentation/auth.controller';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { GetMeUseCase } from './application/use-cases/get-me.use-case';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { TenantAuthGuard } from '@common/guards/tenant-auth.guard';
 
@@ -26,6 +28,8 @@ import { TenantAuthGuard } from '@common/guards/tenant-auth.guard';
   providers: [
     LoginUseCase,
     RefreshTokenUseCase,
+    LogoutUseCase,
+    GetMeUseCase,
     JwtStrategy,
     // TenantAuthGuard aplicado globalmente a partir do AuthModule
     {

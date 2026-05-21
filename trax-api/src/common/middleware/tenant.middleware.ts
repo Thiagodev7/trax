@@ -52,9 +52,9 @@ export class TenantMiddleware implements NestMiddleware {
   }
 
   private extractHostname(req: Request): string {
-    // Suporte ao header X-Agency-Domain (enviado pelo Flutter web)
+    // Suporte ao header X-Agency-Domain (enviado pelo Flutter web/Next.js)
     const xDomain = req.headers['x-agency-domain'] as string | undefined;
-    if (xDomain) return xDomain.toLowerCase().trim();
+    if (xDomain) return xDomain.split(':')[0].toLowerCase().trim();
 
     // Fallback: Host header padrão (sem porta)
     const host = req.hostname || req.headers.host || '';
@@ -73,7 +73,12 @@ export class TenantMiddleware implements NestMiddleware {
     // 2. Extrai slug do subdomínio (ex: "agencia" de "agencia.trax.app")
     const baseDomain = process.env.TRAX_BASE_DOMAIN ?? 'trax.app';
     const slugMatch = hostname.match(new RegExp(`^([^.]+)\\.${baseDomain}$`));
-    const slug = slugMatch?.[1];
+    let slug = slugMatch?.[1];
+
+    // Fallback de desenvolvimento: se acessar 'localhost' puro, direciona para agenciademo
+    if (!slug && hostname === 'localhost' && process.env.NODE_ENV !== 'production') {
+      slug = 'agenciademo';
+    }
 
     // 3. Busca no banco por customDomain ou slug
     const agency = await this.prisma.agency.findFirst({

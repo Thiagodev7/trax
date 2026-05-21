@@ -1,11 +1,8 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '@/prisma/prisma.service';
 import { getAgencyId } from '@common/context/tenant.context';
 import { LoginDto } from '../../presentation/dto/login.dto';
@@ -14,6 +11,11 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+}
+
+interface LoginMeta {
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 @Injectable()
@@ -26,7 +28,7 @@ export class LoginUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(dto: LoginDto): Promise<TokenPair> {
+  async execute(dto: LoginDto, meta?: LoginMeta): Promise<TokenPair> {
     const agencyId = getAgencyId();
 
     // 1. Busca usuário — sempre filtrado pelo tenant atual
@@ -48,14 +50,14 @@ export class LoginUseCase {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // 2. Verifica senha (SHA-256 — em produção usar bcrypt)
-    const inputHash = createHash('sha256').update(dto.password).digest('hex');
-    if (inputHash !== user.passwordHash) {
+    // 2. Verifica senha com bcrypt (tempo constante, resistente a timing attacks)
+    const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!passwordMatch) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
     // 3. Gera tokens
-    const { accessToken, refreshToken } = await this.generateTokenPair(user);
+    const { accessToken, refreshToken } = await this.generateTokenPair(user, meta);
 
     // 4. Atualiza lastLoginAt
     await this.prisma.user.update({
@@ -69,12 +71,10 @@ export class LoginUseCase {
     return { accessToken, refreshToken, expiresIn };
   }
 
-  private async generateTokenPair(user: {
-    id: string;
-    agencyId: string;
-    email: string;
-    role: string;
-  }): Promise<{ accessToken: string; refreshToken: string }> {
+  private async generateTokenPair(
+    user: { id: string; agencyId: string; email: string; role: string },
+    meta?: LoginMeta,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = {
       sub: user.id,
       agencyId: user.agencyId,
@@ -96,6 +96,8 @@ export class LoginUseCase {
         userId: user.id,
         tokenHash,
         expiresAt,
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent?.substring(0, 512),
       },
     });
 

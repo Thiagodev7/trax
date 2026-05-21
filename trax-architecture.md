@@ -271,3 +271,173 @@ fix/<ticket>-<descricao>
 
 - PRs para `develop` requerem 1 aprovação + CI verde.
 - Mensagens de commit: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
+
+---
+
+## 9. Billing & Planos
+
+### 9.1 Enum AgencyPlan
+
+```prisma
+enum AgencyPlan {
+  TRIAL      // Grátis 14 dias (2 clientes, 1 usuário)
+  STARTER    // R$ 197/mês (5 clientes, 2 usuários)
+  PRO        // R$ 497/mês (20 clientes, 10 usuários)
+  AGENCY     // R$ 997/mês (ilimitado)
+  ENTERPRISE // Sob consulta (ilimitado + SLA)
+}
+```
+
+### 9.2 Campos de Billing no modelo Agency
+
+```prisma
+plan                 AgencyPlan @default(TRIAL)
+stripeCustomerId     String?    @unique
+stripeSubscriptionId String?    @unique
+maxClients           Int        @default(2)
+maxUsers             Int        @default(1)
+trialEndsAt          DateTime?
+```
+
+### 9.3 Integração Stripe (Fase 2)
+
+- Checkout Session no onboarding com `trial_period_days: 14`
+- Webhooks: `customer.subscription.created`, `invoice.payment_failed`, `customer.subscription.deleted`
+- Portal de cliente: `stripe.billingPortal.sessions.create()`
+- Guard `PlanGuard` verifica limites (`maxClients`, `maxUsers`) antes de criar recursos
+
+---
+
+## 10. Storage de Assets
+
+### 10.1 Arquivos de Tenants (logos, favicons)
+
+- **Desenvolvimento**: URLs externas (ex: Cloudinary CDN, placehold.co)
+- **Produção**: Cloudflare R2 (compatível com S3, sem egress fees)
+
+```
+Estrutura do bucket:
+  agencies/<agencyId>/logo.<ext>
+  agencies/<agencyId>/favicon.<ext>
+  clients/<clientId>/logo.<ext>
+  reports/<reportId>/export.pdf
+```
+
+### 10.2 Regras de Upload
+
+- Apenas `AGENCY_ADMIN` pode fazer upload de assets da agência
+- Validação de MIME type (apenas `image/png`, `image/jpeg`, `image/svg+xml`, `image/webp`)
+- Limite de tamanho: 2MB para logos, 500KB para favicons
+- CDN URL retornada após upload (imutável por hash de conteúdo)
+
+---
+
+## 11. Email Transacional
+
+### 11.1 Provedor: Resend (Fase 2)
+
+```typescript
+// Exemplo de envio
+resend.emails.send({
+  from: `${agency.name} <noreply@trax.app>`,
+  to: user.email,
+  subject: 'Novo relatório disponível',
+  html: reportPublishedTemplate({ agencyName, reportTitle, reportUrl }),
+});
+```
+
+### 11.2 Templates Previstos
+
+| Template | Gatilho |
+|----------|---------|
+| `welcome` | Novo usuário criado |
+| `report-published` | Relatório publicado pelo admin |
+| `share-link` | Link de relatório compartilhado |
+| `trial-ending` | 3 dias antes do trial expirar |
+| `payment-failed` | Falha no pagamento Stripe |
+| `password-reset` | Solicitação de reset de senha |
+
+---
+
+## 12. Infraestrutura de Produção
+
+### 12.1 Diagrama
+
+```
+Cloudflare (DNS + WAF + DDoS)
+  ↓
+Railway / Render
+  ├── trax-api (NestJS, auto-scale)
+  ├── PostgreSQL (Railway managed ou Neon serverless)
+  └── Redis (Upstash serverless)
+  
+Cloudflare R2 ← logos e assets dos tenants
+Resend ← emails transacionais
+Stripe ← billing
+```
+
+### 12.2 Variáveis de Ambiente Adicionais (Produção)
+
+```bash
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Resend
+RESEND_API_KEY=re_...
+EMAIL_FROM_DOMAIN=trax.app
+
+# Storage
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=trax-assets
+R2_PUBLIC_URL=https://assets.trax.app
+```
+
+---
+
+## 13. Super Admin Panel
+
+### 13.1 Escopo
+
+Interface separada em `admin.trax.app` para o dono do SaaS (não é um tenant).
+Autenticação própria com `role: SUPER_ADMIN` em tabela separada.
+
+### 13.2 Rotas
+
+```
+GET  /admin/agencies          → lista todos os tenants com MRR e status
+POST /admin/agencies          → cria nova agência manualmente
+GET  /admin/agencies/:id      → detalhes do tenant
+PATCH /admin/agencies/:id     → bloquear/desbloquear, alterar plano
+GET  /admin/metrics           → MRR, churn, usuários ativos, relatórios gerados
+```
+
+### 13.3 Isolamento
+
+- Super Admin nunca acessa dados de tenant via TenantMiddleware
+- Queries diretas com `agencyId` explícito — sem contexto de tenant
+- Auditoria de todas as ações do Super Admin em tabela `admin_audit_logs`
+
+---
+
+## 14. Onboarding de Nova Agência
+
+### 14.1 Fluxo Self-Service
+
+```
+1. GET /api/v1/onboarding/check-slug?slug=:slug → verifica disponibilidade
+2. POST /api/v1/onboarding/agency → cria agência + admin user + trial
+3. Envio de email de boas-vindas
+4. Redirect para :<slug>.trax.app/setup (wizard de configuração)
+5. Wizard: upload de logo → escolha de cores → convite de usuários → conectar integração
+```
+
+### 14.2 Validações de Slug
+
+- Mínimo 3 caracteres, máximo 30
+- Apenas letras minúsculas, números e hífens
+- Não pode ser palavra reservada: `www`, `api`, `admin`, `app`, `static`, `assets`
+- Único no banco (verificação em tempo real via endpoint público)
+
