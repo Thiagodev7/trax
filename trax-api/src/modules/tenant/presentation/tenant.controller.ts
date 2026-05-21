@@ -33,6 +33,14 @@ export class TenantController {
         secondaryColor: true,
         accentColor: true,
         fontFamily: true,
+        themeMode: true,
+        borderRadius: true,
+        portalLayout: true,
+        loginLayout: true,
+        loginBackgroundUrl: true,
+        loginTitle: true,
+        loginSubtitle: true,
+        customCss: true,
       },
     });
 
@@ -47,6 +55,14 @@ export class TenantController {
         secondaryColor: agency.secondaryColor,
         accentColor: agency.accentColor,
         fontFamily: agency.fontFamily,
+        themeMode: agency.themeMode,
+        borderRadius: agency.borderRadius,
+        portalLayout: agency.portalLayout,
+        loginLayout: agency.loginLayout,
+        loginBackgroundUrl: agency.loginBackgroundUrl,
+        loginTitle: agency.loginTitle,
+        loginSubtitle: agency.loginSubtitle,
+        customCss: agency.customCss,
       },
     };
   }

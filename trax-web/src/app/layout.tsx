@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google'
 import { headers } from 'next/headers'
 import { SessionProvider } from 'next-auth/react'
 import { Toaster } from 'sonner'
-import { resolveTenant, brandingToCssVars } from '@/lib/tenant'
+import { resolveTenant, brandingToCssString } from '@/lib/tenant'
 import { QueryProvider } from '@/components/providers/query-provider'
 import './globals.css'
 
@@ -36,17 +36,39 @@ export default async function RootLayout({
 }) {
   const host = (await headers()).get('host') ?? ''
   const tenant = await resolveTenant(host)
-  const cssVars = brandingToCssVars(tenant.branding)
+
+  const themeMode = tenant.branding.themeMode || 'dark'
+
+  let htmlClasses = inter.variable
+  if (themeMode === 'dark') htmlClasses += ' dark'
+
+  // Script inline para detecção de tema do sistema antes de qualquer render
+  const themeScript = `(function(){if('${themeMode}'==='system'){if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}}})();`
 
   return (
-    <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
-      <body style={cssVars}>
+    <html lang="pt-BR" className={htmlClasses} suppressHydrationWarning>
+      <head>
+        {/* Injeta os tokens do tenant em :root antes do render para evitar FOUC */}
+        <style dangerouslySetInnerHTML={{ __html: brandingToCssString(tenant.branding) }} />
+        {/* CSS customizado do tenant (campo customCss da agência) */}
+        {tenant.branding.customCss && (
+          <style dangerouslySetInnerHTML={{ __html: tenant.branding.customCss }} />
+        )}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {tenant.branding.fontFamily && tenant.branding.fontFamily !== 'Inter' && (
+          <link
+            rel="stylesheet"
+            href={`https://fonts.googleapis.com/css2?family=${tenant.branding.fontFamily.replace(/\s+/g, '+')}:wght@400;500;600;700&display=swap`}
+          />
+        )}
+      </head>
+      <body>
         <SessionProvider>
           <QueryProvider>
             {children}
             <Toaster
               position="top-right"
-              theme="dark"
+              theme={themeMode === 'light' ? 'light' : 'dark'}
               richColors
               closeButton
               toastOptions={{

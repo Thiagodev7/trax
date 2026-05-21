@@ -19,9 +19,11 @@ import { Public } from '@common/decorators/roles.decorator';
 import { CurrentTenant } from '@common/decorators/current-tenant.decorator';
 import { CurrentUser, AuthenticatedUser } from '@common/decorators/current-user.decorator';
 import { CreateReportDto } from './dto/create-report.dto';
+import { UpdateReportDto } from './dto/update-report.dto';
 import { ListReportsUseCase } from '../application/use-cases/list-reports.use-case';
 import { GetReportUseCase } from '../application/use-cases/get-report.use-case';
 import { CreateReportUseCase } from '../application/use-cases/create-report.use-case';
+import { UpdateReportUseCase } from '../application/use-cases/update-report.use-case';
 import { PublishReportUseCase } from '../application/use-cases/publish-report.use-case';
 import { DeleteReportUseCase } from '../application/use-cases/delete-report.use-case';
 
@@ -32,6 +34,7 @@ export class ReportController {
     private readonly listReports: ListReportsUseCase,
     private readonly getReport: GetReportUseCase,
     private readonly createReport: CreateReportUseCase,
+    private readonly updateReport: UpdateReportUseCase,
     private readonly publishReport: PublishReportUseCase,
     private readonly deleteReport: DeleteReportUseCase,
   ) {}
@@ -87,6 +90,20 @@ export class ReportController {
     @Body() dto: CreateReportDto,
   ) {
     return this.createReport.execute(agencyId, dto);
+  }
+
+  @ApiBearerAuth()
+  @Patch(':id')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Atualiza metadados, integrações e moduleConfig do relatório' })
+  async update(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateReportDto,
+  ) {
+    return this.updateReport.execute(agencyId, id, dto);
   }
 
   @ApiBearerAuth()

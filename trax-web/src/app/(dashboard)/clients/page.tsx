@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function ClientsPage() {
   const session = await auth()
-  
+
   if (!session) {
     redirect('/login')
   }
@@ -21,16 +21,19 @@ export default async function ClientsPage() {
     const cookieStore = await cookies()
     const allCookies = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ')
     const host = (await headers()).get('host') ?? ''
-    
+
     const response = await apiRequest<any>('/clients', {
       domain: host,
       headers: {
         Cookie: allCookies
       }
     })
-    
-    clients = response
+
+    clients = response?.data || []
   } catch (error) {
+    if ((error as any)?.message === 'NEXT_REDIRECT' || (error as any)?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
     console.error('Failed to fetch clients:', error)
   }
 

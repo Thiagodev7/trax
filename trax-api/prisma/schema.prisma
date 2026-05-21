@@ -36,6 +36,9 @@ enum IntegrationProvider {
   META_ADS
   TIKTOK_ADS
   LINKEDIN_ADS
+  INSTAGRAM
+  FACEBOOK_PAGE
+  NECTAR_CRM
   CUSTOM
 }
 
@@ -66,6 +69,13 @@ model Agency {
   secondaryColor       String     @default("#818CF8") @db.VarChar(7)
   accentColor          String     @default("#F59E0B") @db.VarChar(7)
   fontFamily           String     @default("Inter") @db.VarChar(100)
+  themeMode            String     @default("dark") @db.VarChar(20) // "light", "dark", "system"
+  borderRadius         String     @default("medium") @db.VarChar(20) // "none", "small", "medium", "large", "full"
+  portalLayout         String     @default("sidebar") @db.VarChar(20) // "sidebar", "topbar"
+  loginLayout          String     @default("centered") @db.VarChar(20) // "centered", "split"
+  loginBackgroundUrl   String?    @db.VarChar(1024)
+  loginTitle           String?    @db.VarChar(255)
+  loginSubtitle        String?    @db.VarChar(255)
   // Billing & Planos
   plan                 AgencyPlan @default(TRIAL)
   stripeCustomerId     String?    @unique @db.VarChar(255)
@@ -194,19 +204,48 @@ model Integration {
   displayName     String?             @db.VarChar(255)
   // Armazenado como JSON criptografado: { iv, authTag, data }
   credentialsEnc  String              @db.Text
+  // Metadados não-sensíveis: { adAccountId, pageId, nectarBaseUrl, campaignIds, ... }
+  metadata        Json?
   externalAccount String?             @db.VarChar(255) // ID da conta na plataforma
   lastSyncAt      DateTime?
   lastErrorMsg    String?             @db.Text
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  client  Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  reports ReportIntegration[]
+  client       Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reports      ReportIntegration[]
+  dailyMetrics DailyMetric[]
 
   @@unique([clientId, provider, externalAccount])
   @@index([agencyId, clientId])
   @@index([agencyId, status])
   @@map("integrations")
+}
+
+// ---------------------------------------------------------------------------
+// DAILY_METRIC — Cache de métricas por dia por integração
+// Estrutura análoga ao ALL_DATA do Tron dashboard
+// ---------------------------------------------------------------------------
+model DailyMetric {
+  id            String   @id @default(uuid()) @db.Uuid
+  integrationId String   @db.Uuid
+  date          DateTime @db.Date
+  // "campaign" | "adset" | "organic_ig" | "organic_fb" | "crm" | "creative"
+  metricType    String   @db.VarChar(50)
+  // campaign_id, adset_id, post_id, "summary", etc.
+  entityId      String?  @db.VarChar(255)
+  entityName    String?  @db.VarChar(255)
+  // Métricas brutas: { leads, spend, impressions, clicks, ctr, cpc, cpm, cpl, ... }
+  data          Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, date, metricType, entityId])
+  @@index([integrationId, date])
+  @@index([integrationId, metricType, date])
+  @@map("daily_metrics")
 }
 
 // ---------------------------------------------------------------------------
@@ -223,7 +262,9 @@ model Report {
   shareExpiresAt DateTime?
   periodStart    DateTime?    @db.Date
   periodEnd      DateTime?    @db.Date
-  layoutJson     Json? // Configuração dos blocos/widgets do relatório
+  layoutJson     Json? // Configuração dos blocos/widgets do relatório (legado)
+  // { enabledTabs: ["META_ADS","ORGANIC","CALENDAR","KPI"], defaultTab: "META_ADS" }
+  moduleConfig   Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   publishedAt    DateTime?

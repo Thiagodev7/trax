@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreHorizontal, ExternalLink, Activity, Pencil, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, ExternalLink, Activity, Pencil, Trash2, Eye, Plug } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { formatNumber } from '@/lib/utils'
@@ -225,6 +225,15 @@ export function ClientTable({ initialClients = [] }: ClientTableProps) {
                           <Eye className="w-4 h-4" />
                         </Link>
 
+                        {/* Integrações */}
+                        <Link
+                          href={`/clients/${client.id}/integrations`}
+                          className="p-1.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-2)] rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                          title="Integrações"
+                        >
+                          <Plug className="w-4 h-4" />
+                        </Link>
+
                         {/* Botão de Editar */}
                         <Link
                           href={`/clients/${client.id}/edit`}
@@ -254,6 +263,15 @@ export function ClientTable({ initialClients = [] }: ClientTableProps) {
                                 >
                                   <Pencil className="w-4 h-4" />
                                   Editar Cliente
+                                </Link>
+                              </DropdownMenu.Item>
+                              <DropdownMenu.Item asChild>
+                                <Link
+                                  href={`/clients/${client.id}/integrations`}
+                                  className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] rounded-md outline-none cursor-pointer"
+                                >
+                                  <Plug className="w-4 h-4" />
+                                  Integrações
                                 </Link>
                               </DropdownMenu.Item>
                               <DropdownMenu.Item asChild>

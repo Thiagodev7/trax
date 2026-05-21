@@ -22,6 +22,7 @@ const REPORT_SELECT = {
   periodStart: true,
   periodEnd: true,
   layoutJson: true,
+  moduleConfig: true,
   publishedAt: true,
   createdAt: true,
   updatedAt: true,

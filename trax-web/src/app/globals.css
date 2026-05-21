@@ -1,33 +1,49 @@
 @import "tailwindcss";
 
 @theme {
-  /* Cores dinâmicas do tenant (sobrescritas via CSS variables por tenant) */
-  --color-primary: var(--color-primary, #6366f1);
-  --color-primary-hover: color-mix(in srgb, var(--color-primary) 80%, white);
-  --color-secondary: var(--color-secondary, #818cf8);
-  --color-accent: var(--color-accent, #f59e0b);
+  /* Cores dinâmicas do tenant — valores padrão estáticos (sem referências circulares).
+     O tenant sobrescreve via <style> tag em :root no layout.tsx. */
+  --color-primary: #6366f1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #818cf8;
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #f59e0b;
+  --color-accent-foreground: #000000;
 
-  /* Sistema de cores dark (base) */
-  --color-bg: #020617;
-  --color-surface: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-border: #334155;
-  --color-muted: #64748b;
-  --color-muted-foreground: #94a3b8;
-  --color-foreground: #f1f5f9;
-  --color-foreground-muted: #cbd5e1;
+  /* Sistema de cores light (padrão) */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-muted: #94a3b8;
+  --color-muted-foreground: #64748b;
+  --color-foreground: #0f172a;
+  --color-foreground-muted: #334155;
 
   /* Semânticas */
   --color-success: #10b981;
+  --color-success-foreground: #ffffff;
   --color-warning: #f59e0b;
+  --color-warning-foreground: #000000;
   --color-danger: #ef4444;
+  --color-danger-foreground: #ffffff;
   --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
 
   /* Fontes */
   --font-sans: var(--font-family, 'Inter'), system-ui, sans-serif;
   --font-mono: 'Fira Code', 'Cascadia Code', monospace;
 
-  /* Border radius */
+  /* Escala tipográfica */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  /* Border radius — sobrescritos pelo tenant via :root */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -44,9 +60,20 @@
     border-color: var(--color-border);
   }
 
+  .dark {
+    --color-bg: #020617;
+    --color-surface: #0f172a;
+    --color-surface-2: #1e293b;
+    --color-border: #334155;
+    --color-muted: #64748b;
+    --color-muted-foreground: #94a3b8;
+    --color-foreground: #f1f5f9;
+    --color-foreground-muted: #cbd5e1;
+    color-scheme: dark;
+  }
+
   html {
     font-family: var(--font-sans);
-    color-scheme: dark;
     scroll-behavior: smooth;
   }
 
@@ -57,7 +84,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Scrollbar customizada */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -73,7 +99,6 @@
     background: var(--color-muted);
   }
 
-  /* Focus ring acessível */
   :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -134,7 +159,6 @@
     100% { background-position: 200% 0; }
   }
 
-  /* Fade in */
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out;
   }
@@ -144,7 +168,6 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Glow effect */
   .glow-primary {
     box-shadow: var(--shadow-glow);
   }

@@ -2,6 +2,7 @@ import {
   IsString,
   IsOptional,
   IsUrl,
+  ValidateIf,
   Matches,
   MaxLength,
   MinLength,
@@ -18,12 +19,14 @@ export class UpdateAgencyBrandingDto {
 
   @ApiPropertyOptional({ example: 'https://cdn.agencia.com/logo.png' })
   @IsOptional()
+  @ValidateIf(e => e.logoUrl !== '')
   @IsUrl()
   @MaxLength(1024)
   logoUrl?: string;
 
   @ApiPropertyOptional({ example: 'https://cdn.agencia.com/favicon.png' })
   @IsOptional()
+  @ValidateIf(e => e.faviconUrl !== '')
   @IsUrl()
   @MaxLength(1024)
   faviconUrl?: string;
@@ -54,4 +57,53 @@ export class UpdateAgencyBrandingDto {
   @IsString()
   @MaxLength(255)
   customDomain?: string;
+
+  @ApiPropertyOptional({ example: 'dark' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  themeMode?: string;
+
+  @ApiPropertyOptional({ example: 'medium' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  borderRadius?: string;
+
+  @ApiPropertyOptional({ example: 'sidebar' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  portalLayout?: string;
+
+  @ApiPropertyOptional({ example: 'centered' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  loginLayout?: string;
+
+  @ApiPropertyOptional({ example: 'https://cdn.agencia.com/login-bg.jpg' })
+  @IsOptional()
+  @ValidateIf(e => e.loginBackgroundUrl !== '')
+  @IsUrl()
+  @MaxLength(1024)
+  loginBackgroundUrl?: string;
+
+  @ApiPropertyOptional({ example: 'Bem-vindo ao Portal' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  loginTitle?: string;
+
+  @ApiPropertyOptional({ example: 'Faça login para ver seus resultados' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  loginSubtitle?: string;
+
+  @ApiPropertyOptional({ example: ':root { --color-primary: #FF0000; }', description: 'CSS customizado injetado no <head> do portal' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  customCss?: string;
 }

@@ -3,6 +3,7 @@ import { apiRequest } from '@/lib/api-client'
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { canAccessSettings } from '@/lib/roles'
 
 export const metadata = {
   title: 'Configurações de Branding | Trax',
@@ -10,9 +11,14 @@ export const metadata = {
 
 export default async function SettingsPage() {
   const session = await auth()
-  
+
   if (!session) {
     redirect('/login')
+  }
+
+  const role = (session.user as { role?: string })?.role
+  if (!canAccessSettings(role)) {
+    redirect('/')
   }
 
   // Fetch current branding config
@@ -21,16 +27,19 @@ export default async function SettingsPage() {
     const cookieStore = await cookies()
     const allCookies = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ')
     const host = (await headers()).get('host') ?? ''
-    
+
     const response = await apiRequest<any>('/agency/branding', {
       domain: host,
       headers: {
         Cookie: allCookies
       }
     })
-    
+
     brandingData = response
   } catch (error) {
+    if ((error as any)?.message === 'NEXT_REDIRECT' || (error as any)?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
     console.error('Failed to fetch agency branding:', error)
   }
 

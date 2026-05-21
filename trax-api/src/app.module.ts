@@ -8,7 +8,12 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AgencyModule } from './modules/agency/agency.module';
 import { ClientModule } from './modules/client/client.module';
 import { ReportModule } from './modules/report/report.module';
+import { IntegrationModule } from './modules/integration/integration.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { TenantMiddleware } from '@common/middleware/tenant.middleware';
+import { UploadModule } from './modules/upload/upload.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -36,6 +41,15 @@ import { TenantMiddleware } from '@common/middleware/tenant.middleware';
     AgencyModule,
     ClientModule,
     ReportModule,
+    IntegrationModule,
+    MetricsModule,
+    UploadModule,
+
+    // --- Servir arquivos estáticos (Uploads) ---
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/public',
+    }),
   ],
   providers: [
     {
