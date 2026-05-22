@@ -61,6 +61,7 @@ export class AuthController {
     res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
     return {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
     };
   }

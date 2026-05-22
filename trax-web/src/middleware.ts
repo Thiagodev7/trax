@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth
+  const sessionError = (req.auth as { error?: string } | null)?.error
+  const isLoggedIn = !!req.auth && sessionError !== 'RefreshTokenError'
   const pathname = req.nextUrl.pathname
 
   const isLoginPage = pathname === '/login'

@@ -15,14 +15,18 @@ export async function apiRequest<T>(
   const session = await auth()
   const { domain, ...fetchOptions } = options
 
+  if (session?.error === 'RefreshTokenError') {
+    redirect('/login?expired=1')
+  }
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(fetchOptions.headers as Record<string, string>),
   }
 
-  if ((session as any)?.accessToken) {
+  if (session?.accessToken) {
     ;(headers as Record<string, string>)['Authorization'] =
-      `Bearer ${(session as any).accessToken}`
+      `Bearer ${session.accessToken}`
   }
 
   if (domain) {
@@ -36,7 +40,7 @@ export async function apiRequest<T>(
 
   if (!res.ok) {
     if (res.status === 401) {
-      redirect('/logout')
+      redirect('/login?expired=1')
     }
     const error = await res.json().catch(() => ({ message: res.statusText }))
     throw new Error(error.message || `API Error: ${res.status}`)

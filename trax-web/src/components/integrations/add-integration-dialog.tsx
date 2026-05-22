@@ -2,12 +2,18 @@
 
 import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, Plus, ChevronDown } from 'lucide-react'
+import { X, Plus, ChevronDown, Info, ExternalLink } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { toast } from 'sonner'
 import type { Integration, IntegrationProvider } from './integration-list'
 
-const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[] }> = [
+interface GuideDef {
+  title: string
+  steps: string[]
+  links?: { label: string; url: string }[]
+}
+
+const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[]; guide?: GuideDef }> = [
   {
     value: 'META_ADS',
     label: 'Meta Ads',
@@ -16,6 +22,23 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       { key: 'accessToken', label: 'Access Token', placeholder: 'EAAx...', type: 'password' },
       { key: 'adAccountId', label: 'Ad Account ID', placeholder: 'act_1088579197977036', type: 'text' },
     ],
+    guide: {
+      title: 'Como obter credenciais do Meta Ads',
+      steps: [
+        'No developers.facebook.com, abra seu app (ex.: Trax). A tela Configurações > Básico mostra o ID do app e a Chave Secreta — isso NÃO é o token que você cola aqui.',
+        'No menu lateral, em Produtos, adicione o produto Marketing API ao app (obrigatório para ler dados de anúncios).',
+        'Vá em Ferramentas > Explorador da API do Graph. Selecione seu app, clique em Gerar token de acesso e marque ads_read (leitura). Autorize com a conta Facebook que administra a conta de anúncios.',
+        'Copie o token gerado (começa com EAA…) e cole no campo Access Token abaixo.',
+        'Ad Account ID: abra o Gerenciador de Anúncios. Na URL aparece act=NUMERO — use act_NUMERO (ex.: act_250138776254796). Cole também no campo Ad Account ID; o campo "ID externo" é opcional e pode repetir o mesmo valor.',
+        'Em modo Desenvolvimento o app só acessa contas de anúncios das pessoas com função no app (Administrador/Desenvolvedor). Para produção, use token de System User no Business Manager.',
+      ],
+      links: [
+        { label: 'Seu app no Meta', url: 'https://developers.facebook.com/apps/' },
+        { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
+        { label: 'Gerenciador de Anúncios', url: 'https://adsmanager.facebook.com/' },
+        { label: 'Business Manager (System User)', url: 'https://business.facebook.com/settings/system-users' },
+      ],
+    }
   },
   {
     value: 'INSTAGRAM',
@@ -25,6 +48,19 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       { key: 'accessToken', label: 'Access Token', placeholder: 'EAAx...', type: 'password' },
       { key: 'igUserId', label: 'Instagram Business Account ID', placeholder: '17841400...', type: 'text' },
     ],
+    guide: {
+      title: 'Como obter credenciais do Instagram',
+      steps: [
+        'A conta Instagram precisa ser Profissional (Comercial ou Criador) e vinculada a uma Página do Facebook.',
+        'No app Meta, adicione os produtos Facebook Login e Instagram (se ainda não estiverem).',
+        'No Graph API Explorer (Ferramentas), gere um token com instagram_basic, instagram_manage_insights e pages_show_list.',
+        'No Explorer, teste GET /me/accounts e depois GET /{page-id}?fields=instagram_business_account para obter o Instagram Business Account ID (número longo, ex.: 17841400…).',
+        'Cole o mesmo token no Access Token e o ID obtido no campo Instagram Business Account ID.',
+      ],
+      links: [
+        { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
+      ],
+    }
   },
   {
     value: 'FACEBOOK_PAGE',
@@ -34,6 +70,18 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       { key: 'accessToken', label: 'Page Access Token', placeholder: 'EAAx...', type: 'password' },
       { key: 'pageId', label: 'Page ID', placeholder: '102345678...', type: 'text' },
     ],
+    guide: {
+      title: 'Como obter credenciais da Facebook Page',
+      steps: [
+        'Use o mesmo app no Meta for Developers. O token NÃO vem da tela Básico — gere no Graph API Explorer.',
+        'No Explorer, permissões: pages_show_list, pages_read_engagement, read_insights.',
+        'GET /me/accounts lista suas páginas; cada item tem id (Page ID) e access_token (Page Access Token). Use o access_token da página desejada no campo Page Access Token.',
+        'O Page ID é o id numérico da página na resposta (ou em Sobre > Transparência da página no Facebook).',
+      ],
+      links: [
+        { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
+      ],
+    }
   },
   {
     value: 'NECTAR_CRM',
@@ -43,6 +91,15 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       { key: 'apiToken', label: 'API Token', placeholder: 'seu-token-nectar', type: 'password' },
       { key: 'baseUrl', label: 'Base URL (opcional)', placeholder: 'https://app.nectarcrm.com.br', type: 'text' },
     ],
+    guide: {
+      title: 'Como obter o token do Nectar CRM',
+      steps: [
+        'Acesse a sua conta no Nectar CRM.',
+        'Vá em "Configurações" (ícone de engrenagem no menu lateral).',
+        'Acesse a seção "Integrações" e depois "API".',
+        'Gere ou copie o seu "Token de API". A "Base URL" costuma ser https://app.nectarcrm.com.br.'
+      ]
+    }
   },
   {
     value: 'GOOGLE_ADS',
@@ -53,6 +110,18 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       { key: 'customerId', label: 'Customer ID', placeholder: '123-456-7890', type: 'text' },
       { key: 'developerToken', label: 'Developer Token', placeholder: '...', type: 'password' },
     ],
+    guide: {
+      title: 'Como obter credenciais do Google Ads',
+      steps: [
+        'O "Customer ID" (ID do Cliente) é o número de 10 dígitos (ex: 123-456-7890) encontrado no canto superior direito do seu painel do Google Ads.',
+        'O "Developer Token" é obtido na sua Conta de Administrador (MCC) do Google Ads, na seção "Minha Central de API".',
+        'Para obter o "Refresh Token", crie um projeto no Google Cloud, ative a Google Ads API, crie credenciais OAuth 2.0 e utilize o OAuth 2.0 Playground do Google para gerar o token de atualização.'
+      ],
+      links: [
+        { label: 'Google Cloud Console', url: 'https://console.cloud.google.com/' },
+        { label: 'OAuth 2.0 Playground', url: 'https://developers.google.com/oauthplayground/' }
+      ]
+    }
   },
 ]
 
@@ -163,6 +232,38 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
                 >
                   ← Voltar
                 </button>
+
+                {selectedProvider.guide && (
+                  <div className="mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-blue-500" />
+                      <h4 className="font-semibold text-sm text-[var(--color-foreground)]">
+                        {selectedProvider.guide.title}
+                      </h4>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1.5 text-xs text-[var(--color-muted-foreground)] mb-3">
+                      {selectedProvider.guide.steps.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                    {selectedProvider.guide.links && selectedProvider.guide.links.length > 0 && (
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        {selectedProvider.guide.links.map((link, idx) => (
+                          <a
+                            key={idx}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors"
+                          >
+                            {link.label}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-medium text-[var(--color-muted-foreground)] mb-1.5 uppercase tracking-wide">

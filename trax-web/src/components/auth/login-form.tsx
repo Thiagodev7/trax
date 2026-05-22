@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
@@ -24,8 +24,15 @@ export function LoginForm({ domain }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') ?? '/'
+  const sessionExpired = searchParams.get('expired') === '1'
   const [isPending, startTransition] = useTransition()
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (sessionExpired) {
+      toast.info('Sua sessão expirou. Faça login novamente.')
+    }
+  }, [sessionExpired])
 
   const {
     register,

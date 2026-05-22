@@ -63,7 +63,7 @@ export default async function RootLayout({
         )}
       </head>
       <body>
-        <SessionProvider>
+        <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus>
           <QueryProvider>
             {children}
             <Toaster

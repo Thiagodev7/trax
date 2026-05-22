@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
+import { refreshAccessToken, shouldRefreshAccessToken } from '@/lib/auth-refresh'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -20,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const domain = (credentials.domain as string) || 'agenciademo.trax.app'
+        const domain = (credentials.domain as string) || 'localhost'
 
         try {
           const res = await fetch(`${process.env.API_URL}/api/v1/auth/login`, {
@@ -39,7 +40,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const data = await res.json()
 
-          // Busca o perfil completo do usuário
           const meRes = await fetch(`${process.env.API_URL}/api/v1/auth/me`, {
             headers: {
               Authorization: `Bearer ${data.accessToken}`,
@@ -50,6 +50,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!meRes.ok) return null
           const me = await meRes.json()
 
+          const expiresIn = (data.expiresIn as number) ?? 15 * 60
+
           return {
             id: me.id,
             email: me.email,
@@ -59,6 +61,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             agency: me.agency,
             clients: me.clients,
             accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+            expiresIn,
+            agencyDomain: domain,
           }
         } catch {
           return null
@@ -67,25 +72,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.id = user.id as string
-        token.role = (user as any).role
-        token.agencyId = (user as any).agencyId
-        token.agency = (user as any).agency
-        token.clients = (user as any).clients
-        token.accessToken = (user as any).accessToken
+        const u = user as Record<string, unknown>
+        const expiresIn = (u.expiresIn as number) ?? 15 * 60
+        return {
+          ...token,
+          id: u.id as string,
+          role: u.role,
+          agencyId: u.agencyId,
+          agency: u.agency,
+          clients: u.clients,
+          accessToken: u.accessToken,
+          refreshToken: u.refreshToken,
+          accessTokenExpires: Date.now() + expiresIn * 1000,
+          agencyDomain: u.agencyDomain,
+          error: undefined,
+        }
       }
+
+      if (shouldRefreshAccessToken(token as Record<string, unknown>)) {
+        return refreshAccessToken(token as Record<string, unknown>)
+      }
+
       return token
     },
     session({ session, token }) {
-      const u = session.user as any
+      const u = session.user as Record<string, unknown>
       u.id = token.id as string
       u.role = token.role as string
       u.agencyId = token.agencyId as string
-      u.agency = token.agency as any
-      u.clients = token.clients as any
-      ;(session as any).accessToken = token.accessToken
+      u.agency = token.agency as unknown
+      u.clients = token.clients as unknown
+      ;(session as { accessToken?: string; error?: string }).accessToken =
+        token.accessToken as string
+      if (token.error === 'RefreshTokenError') {
+        ;(session as { error?: string }).error = 'RefreshTokenError'
+      }
       return session
     },
   },
@@ -93,5 +116,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: '/login',
     error: '/login',
   },
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 7 * 24 * 60 * 60 },
 })
