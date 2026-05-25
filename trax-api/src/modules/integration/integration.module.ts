@@ -10,6 +10,7 @@ import { MetaAdsService } from './application/services/meta-ads.service';
 import { InstagramService } from './application/services/instagram.service';
 import { FacebookPageService } from './application/services/facebook-page.service';
 import { NectarCrmService } from './application/services/nectar-crm.service';
+import { SyncScheduler } from './application/services/sync.scheduler';
 
 @Module({
   controllers: [IntegrationController],
@@ -24,6 +25,7 @@ import { NectarCrmService } from './application/services/nectar-crm.service';
     InstagramService,
     FacebookPageService,
     NectarCrmService,
+    SyncScheduler,
   ],
   exports: [MetaAdsService, InstagramService, FacebookPageService, NectarCrmService],
 })

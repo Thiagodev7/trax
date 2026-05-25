@@ -20,14 +20,14 @@ export class UpdateAgencyBrandingDto {
   @ApiPropertyOptional({ example: 'https://cdn.agencia.com/logo.png' })
   @IsOptional()
   @ValidateIf(e => e.logoUrl !== '')
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @MaxLength(1024)
   logoUrl?: string;
 
   @ApiPropertyOptional({ example: 'https://cdn.agencia.com/favicon.png' })
   @IsOptional()
   @ValidateIf(e => e.faviconUrl !== '')
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @MaxLength(1024)
   faviconUrl?: string;
 
@@ -85,7 +85,7 @@ export class UpdateAgencyBrandingDto {
   @ApiPropertyOptional({ example: 'https://cdn.agencia.com/login-bg.jpg' })
   @IsOptional()
   @ValidateIf(e => e.loginBackgroundUrl !== '')
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @MaxLength(1024)
   loginBackgroundUrl?: string;
 

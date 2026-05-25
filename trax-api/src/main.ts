@@ -14,7 +14,7 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('APP_PORT', 3000);
+  const port = process.env.PORT || configService.get<number>('APP_PORT', 3000);
   const nodeEnv = configService.get<string>('NODE_ENV', 'development');
 
   // --- Security ---
@@ -68,7 +68,7 @@ async function bootstrap() {
     console.log(`📚 Swagger: http://localhost:${port}/api/docs`);
   }
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Trax API rodando em http://localhost:${port}/api`);
   console.log(`   Ambiente: ${nodeEnv}`);
 }

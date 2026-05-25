@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { decryptCredentials } from '../crypto.helper';
 import { MetaAdsService } from '../services/meta-ads.service';
@@ -77,7 +77,7 @@ export class SyncIntegrationUseCase {
         where: { id: integration.id },
         data: { status: 'ERROR', lastErrorMsg: err.message },
       });
-      throw err;
+      throw new BadRequestException(err.message);
     }
 
     return { synced };

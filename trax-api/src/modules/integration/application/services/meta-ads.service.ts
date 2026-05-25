@@ -91,8 +91,9 @@ export class MetaAdsService {
     ].join(',');
 
     const result: DailyInsightRow[] = [];
+    const accountId = creds.adAccountId.startsWith('act_') ? creds.adAccountId : `act_${creds.adAccountId}`;
     let url: string | null =
-      `${GRAPH_URL}/${creds.adAccountId}/insights?` +
+      `${GRAPH_URL}/${accountId}/insights?` +
       new URLSearchParams({
         level: 'campaign',
         time_range: JSON.stringify({ since: startDate, until: endDate }),
@@ -130,8 +131,9 @@ export class MetaAdsService {
 
   /** Fetch all adsets for the account */
   async fetchAdsets(creds: MetaCredentials): Promise<Array<Record<string, unknown>>> {
+    const accountId = creds.adAccountId.startsWith('act_') ? creds.adAccountId : `act_${creds.adAccountId}`;
     const data = await this.graphGet<{ data: AdSetRow[] }>(
-      `${creds.adAccountId}/adsets`,
+      `${accountId}/adsets`,
       {
         fields: 'id,name,daily_budget,lifetime_budget,status',
         limit: '500',
@@ -160,8 +162,9 @@ export class MetaAdsService {
     ].join(',');
 
     const result: InsightRow[] = [];
+    const accountId = creds.adAccountId.startsWith('act_') ? creds.adAccountId : `act_${creds.adAccountId}`;
     let url: string | null =
-      `${GRAPH_URL}/${creds.adAccountId}/insights?` +
+      `${GRAPH_URL}/${accountId}/insights?` +
       new URLSearchParams({
         level: 'adset',
         time_range: JSON.stringify({ since: startDate, until: endDate }),
@@ -208,8 +211,9 @@ export class MetaAdsService {
     ].join(',');
 
     const result: CreativeInsightRow[] = [];
+    const accountId = creds.adAccountId.startsWith('act_') ? creds.adAccountId : `act_${creds.adAccountId}`;
     let url: string | null =
-      `${GRAPH_URL}/${creds.adAccountId}/insights?` +
+      `${GRAPH_URL}/${accountId}/insights?` +
       new URLSearchParams({
         level: 'ad',
         time_range: JSON.stringify({ since: startDate, until: endDate }),
@@ -240,8 +244,9 @@ export class MetaAdsService {
   /** Validate credentials by fetching basic account info */
   async testConnection(creds: MetaCredentials): Promise<{ valid: boolean; name?: string }> {
     try {
+      const accountId = creds.adAccountId.startsWith('act_') ? creds.adAccountId : `act_${creds.adAccountId}`;
       const data = await this.graphGet<{ name: string; id: string }>(
-        `${creds.adAccountId}`,
+        `${accountId}`,
         { fields: 'id,name', access_token: creds.accessToken },
       );
       return { valid: true, name: data.name };

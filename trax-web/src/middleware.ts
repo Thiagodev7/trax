@@ -7,11 +7,12 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname
 
   const isLoginPage = pathname === '/login'
+  const isSignupPage = pathname === '/signup'
   const isSharePage = pathname.startsWith('/share/')
   const isApiRoute = pathname.startsWith('/api/')
 
   // Permite acesso público a páginas específicas
-  if (isSharePage || isApiRoute) return NextResponse.next()
+  if (isSharePage || isApiRoute || isSignupPage) return NextResponse.next()
 
   // Redireciona usuário não autenticado para login
   if (!isLoggedIn && !isLoginPage) {

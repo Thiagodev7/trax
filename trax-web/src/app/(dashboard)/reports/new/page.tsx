@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApiClient } from '@/lib/api-client-browser'
-import { useSession } from 'next-auth/react'
+import { useQuery } from '@tanstack/react-query'
 
 const schema = z.object({
   title: z.string().min(4, 'Título deve ter pelo menos 4 caracteres'),
@@ -25,12 +25,19 @@ type FormData = z.infer<typeof schema>
 
 export default function NewReportPage() {
   const router = useRouter()
-  const { data: session } = useSession()
   const [isPending, startTransition] = useTransition()
   const api = useApiClient()
 
-  // Obtém clientes da sessão (já carregados no login via /auth/me)
-  const clients: { id: string; name: string }[] = (session?.user as any)?.clients || []
+  // Busca clientes dinamicamente para não depender de sessão desatualizada
+  const { data: clientsData, isLoading: isLoadingClients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const res = await api.get<any>('/clients')
+      return res?.data || res || []
+    },
+  })
+
+  const clients: { id: string; name: string }[] = clientsData || []
 
   const {
     register,
@@ -48,7 +55,7 @@ export default function NewReportPage() {
     },
   })
 
-  const isLoading = isPending || isSubmitting
+  const isLoading = isPending || isSubmitting || isLoadingClients
   const selectedClientId = watch('clientId')
   const selectedClient = clients.find((c) => c.id === selectedClientId)
 

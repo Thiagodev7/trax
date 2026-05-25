@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { UploadCloud, Trash2, Loader2, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ export function ImageUpload({
   description = 'Arraste uma imagem ou clique para selecionar',
   className,
 }: ImageUploadProps) {
+  const { data: session } = useSession() as any
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -66,8 +68,19 @@ export function ImageUpload({
     formData.append('file', file)
 
     try {
-      const res = await fetch('/api/v1/upload', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      const headers: Record<string, string> = {}
+      
+      if (session?.accessToken) {
+        headers['Authorization'] = `Bearer ${session.accessToken}`
+      }
+      if (typeof window !== 'undefined') {
+        headers['X-Agency-Domain'] = window.location.hostname
+      }
+
+      const res = await fetch(`${apiUrl}/api/v1/upload`, {
         method: 'POST',
+        headers,
         body: formData,
       })
 

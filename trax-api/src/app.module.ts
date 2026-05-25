@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/c
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -12,6 +13,8 @@ import { IntegrationModule } from './modules/integration/integration.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { TenantMiddleware } from '@common/middleware/tenant.middleware';
 import { UploadModule } from './modules/upload/upload.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { EmailModule } from './modules/email/email.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -34,6 +37,7 @@ import { join } from 'path';
 
     // --- Infraestrutura ---
     PrismaModule,
+    ScheduleModule.forRoot(),
 
     // --- Domínio ---
     TenantModule,
@@ -44,10 +48,12 @@ import { join } from 'path';
     IntegrationModule,
     MetricsModule,
     UploadModule,
+    OnboardingModule,
+    EmailModule,
 
     // --- Servir arquivos estáticos (Uploads) ---
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(process.cwd(), 'public'),
       serveRoot: '/public',
     }),
   ],
