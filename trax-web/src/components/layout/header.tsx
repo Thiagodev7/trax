@@ -62,7 +62,7 @@ export function Header({ session, tenant: _tenant }: HeaderProps) {
           <DropdownMenu.Trigger asChild>
             <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
               <Avatar>
-                <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'Avatar'} />
+                <AvatarImage src={user.avatarUrl ?? user.image ?? undefined} alt={user.name ?? 'Avatar'} />
                 <AvatarFallback delayMs={600}>
                   {user.name?.[0]?.toUpperCase() ?? 'U'}
                 </AvatarFallback>

@@ -9,6 +9,8 @@ declare module 'next-auth' {
       id: string
       email?: string | null
       name?: string | null
+      image?: string | null
+      avatarUrl?: string | null
       role?: string
       agencyId?: string
       agency?: unknown
