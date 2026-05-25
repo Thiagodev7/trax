@@ -72,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }): Promise<any> {
       if (user) {
         const u = user as Record<string, unknown>
         const expiresIn = (u.expiresIn as number) ?? 15 * 60
