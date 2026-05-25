@@ -38,6 +38,10 @@ export class TenantMiddleware implements NestMiddleware {
     const tenant = await this.resolveTenant(hostname);
 
     if (!tenant) {
+      if (req.path.includes('/tenant/resolve')) {
+        res.status(404).json({ message: `Tenant não encontrado para o domínio: ${hostname}` });
+        return;
+      }
       throw new UnauthorizedException(
         `Tenant não encontrado para o domínio: ${hostname}`,
       );
@@ -93,7 +97,7 @@ export class TenantMiddleware implements NestMiddleware {
     });
 
     if (!agency) {
-      this.logger.warn(`Domínio não mapeado a nenhuma agência: ${hostname}`);
+      this.logger.debug(`Domínio não mapeado a nenhuma agência: ${hostname}`);
       return null;
     }
 
