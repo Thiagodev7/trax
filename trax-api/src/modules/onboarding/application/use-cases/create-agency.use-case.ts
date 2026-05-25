@@ -65,7 +65,7 @@ export class CreateAgencyUseCase {
     });
 
     // Send welcome email asynchronously
-    this.emailService.sendWelcomeEmail(dto.adminEmail, dto.agencyName, dto.adminName);
+    this.emailService.sendWelcomeEmail(dto.adminEmail, dto.agencyName, dto.adminName, slug);
 
     return {
       success: true,
