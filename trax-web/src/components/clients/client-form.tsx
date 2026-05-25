@@ -15,7 +15,6 @@ const optionalUrl = (message: string) =>
     .string()
     .trim()
     .refine((v) => !v || z.string().url().safeParse(v).success, { message })
-    .transform((v) => (v === '' ? undefined : v))
 
 const schema = z.object({
   name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
@@ -65,8 +64,8 @@ export function ClientForm({ initialData, mode = 'create' }: ClientFormProps) {
         await api.patch(`/clients/${initialData!.id}`, {
           name: data.name,
           email: data.email,
-          website: data.website ?? null,
-          logoUrl: data.logoUrl ?? null,
+          website: data.website || null,
+          logoUrl: data.logoUrl || null,
         })
         toast.success('Cliente atualizado com sucesso!')
       } else {
