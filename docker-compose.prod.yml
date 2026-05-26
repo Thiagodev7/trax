@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: trax_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-trax}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - trax_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./trax-api
+      dockerfile: Dockerfile
+    container_name: trax_api_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-trax}?schema=public
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env
+    networks:
+      - trax_network
+
+  web:
+    build:
+      context: ./trax-web
+      dockerfile: Dockerfile
+    container_name: trax_web_prod
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - NEXT_PUBLIC_API_URL=https://api.traxsolucoes.com.br/api
+    env_file:
+      - .env
+    networks:
+      - trax_network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: trax_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - trax_network
+    depends_on:
+      - api
+      - web
+
+volumes:
+  postgres_data_prod:
+  caddy_data:
+  caddy_config:
+
+networks:
+  trax_network:
+    driver: bridge

@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3001'],
+      allowedOrigins: ['localhost:3001', 'app.traxsolucoes.com.br'],
     },
   },
   images: {

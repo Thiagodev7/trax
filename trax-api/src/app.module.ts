@@ -15,6 +15,7 @@ import { TenantMiddleware } from '@common/middleware/tenant.middleware';
 import { UploadModule } from './modules/upload/upload.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { EmailModule } from './modules/email/email.module';
+import { UserModule } from './modules/user/user.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -50,6 +51,7 @@ import { join } from 'path';
     UploadModule,
     OnboardingModule,
     EmailModule,
+    UserModule,
 
     // --- Servir arquivos estáticos (Uploads) ---
     ServeStaticModule.forRoot({

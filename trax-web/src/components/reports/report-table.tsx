@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Search, MoreHorizontal, ExternalLink, FileText, Calendar, Eye, Pencil, Trash2,
-  Share2, CheckCircle, Clock
+  Share2, CheckCircle, Clock, Filter
 } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
@@ -70,15 +70,20 @@ function DeleteReportDialog({
 export function ReportTable({ initialReports = [] }: ReportTableProps) {
   const [reports, setReports] = useState<Report[]>(initialReports)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFT' | 'PUBLISHED'>('ALL')
   const [reportToDelete, setReportToDelete] = useState<Report | null>(null)
   const router = useRouter()
   const api = useApiClient()
 
-  const filtered = reports.filter(
-    (r) =>
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.client.name.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filtered = useMemo(() => {
+    return reports.filter((r) => {
+      const matchSearch =
+        r.title.toLowerCase().includes(search.toLowerCase()) ||
+        r.client.name.toLowerCase().includes(search.toLowerCase())
+      const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
+      return matchSearch && matchStatus
+    })
+  }, [reports, search, statusFilter])
 
   async function handleDelete(report: Report) {
     try {
@@ -103,19 +108,59 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
       <div className="card overflow-hidden border-[var(--color-border)]">
         {/* Toolbar */}
         <div className="p-4 border-b border-[var(--color-border)] flex flex-col sm:flex-row gap-4 items-center justify-between bg-[var(--color-surface)]">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar relatórios..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-            />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:min-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar relatórios..."
+                className="w-full pl-9 pr-4 py-2 text-sm bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+              />
+            </div>
+            
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--color-foreground)] bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface)] transition-colors outline-none shrink-0">
+                  <Filter className="w-4 h-4" />
+                  {statusFilter === 'ALL' ? 'Todos os Status' : statusFilter === 'PUBLISHED' ? 'Publicados' : 'Rascunhos'}
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="start"
+                  sideOffset={4}
+                  className="z-50 min-w-[200px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl p-1 animate-fade-in"
+                >
+                  <DropdownMenu.Item
+                    onClick={() => setStatusFilter('ALL')}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] rounded-md outline-none cursor-pointer"
+                  >
+                    Todos os Status
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    onClick={() => setStatusFilter('PUBLISHED')}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] rounded-md outline-none cursor-pointer"
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    Somente Publicados
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    onClick={() => setStatusFilter('DRAFT')}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] rounded-md outline-none cursor-pointer"
+                  >
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    Somente Rascunhos
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           </div>
+
           <Link
             href="/reports/new"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 transition-all shadow-sm glow-primary"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 transition-all shadow-sm glow-primary shrink-0"
           >
             <Plus className="w-4 h-4" />
             Novo Relatório
@@ -142,10 +187,13 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
                       <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center">
                         <FileText className="w-6 h-6 text-[var(--color-muted)]" />
                       </div>
-                      {search ? (
+                      {search || statusFilter !== 'ALL' ? (
                         <>
-                          <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado para "{search}"</p>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">Tente outra busca ou limpe o filtro</p>
+                          <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado encontrado</p>
+                          <p className="text-sm text-[var(--color-muted-foreground)]">Tente ajustar seus filtros de busca</p>
+                          <button onClick={() => { setSearch(''); setStatusFilter('ALL') }} className="mt-2 text-[var(--color-primary)] text-sm font-medium hover:underline">
+                            Limpar filtros
+                          </button>
                         </>
                       ) : (
                         <>
@@ -336,7 +384,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
         {/* Footer */}
         {filtered.length > 0 && (
           <div className="px-6 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-muted-foreground)]">
-            {search
+            {search || statusFilter !== 'ALL'
               ? `${filtered.length} de ${reports.length} relatórios`
               : `${reports.length} relatório${reports.length !== 1 ? 's' : ''} no total`}
           </div>

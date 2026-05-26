@@ -7,22 +7,13 @@ import Link from 'next/link'
 import {
   TrendingUp, CheckCircle, Clock,
   ArrowRight, BarChart3, Users,
+  Activity, Plus, FileText, Plug
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts'
 import { Card } from '@/components/ui/card'
-
-const AREA_DATA = [
-  { mes: 'Jan', Relatórios: 8, Clientes: 4 },
-  { mes: 'Fev', Relatórios: 15, Clientes: 6 },
-  { mes: 'Mar', Relatórios: 22, Clientes: 9 },
-  { mes: 'Abr', Relatórios: 35, Clientes: 13 },
-  { mes: 'Mai', Relatórios: 58, Clientes: 18 },
-  { mes: 'Jun', Relatórios: 75, Clientes: 22 },
-  { mes: 'Jul', Relatórios: 89, Clientes: 24 },
-]
 
 const BAR_CHART_COLORS = [
   'var(--color-primary)',
@@ -33,20 +24,16 @@ const BAR_CHART_COLORS = [
 ]
 
 interface DashboardChartsProps {
-  recentClients?: Array<{
+  chartData: Array<{ mes: string; Relatórios: number; Clientes: number }>
+  barData: Array<{ name: string; relatórios: number }>
+  activities: Array<{
     id: string
-    name: string
-    logoUrl: string | null
-    isActive: boolean
-    _count?: { reports: number }
-  }>
-  recentReports?: Array<{
-    id: string
+    type: 'CLIENT' | 'REPORT' | 'INTEGRATION'
     title: string
-    status: 'DRAFT' | 'PUBLISHED'
-    createdAt: string
-    shareToken: string | null
-    client: { name: string; logoUrl: string | null }
+    subtitle: string
+    date: Date
+    link: string
+    status?: string
   }>
 }
 
@@ -69,21 +56,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function DashboardCharts({ recentClients = [], recentReports = [] }: DashboardChartsProps) {
-  // Build bar data from real clients (top 5 by report count) or fallback to placeholder
-  const barData = recentClients.length > 0
-    ? [...recentClients]
-        .sort((a, b) => (b._count?.reports ?? 0) - (a._count?.reports ?? 0))
-        .slice(0, 5)
-        .map((c) => ({ name: c.name.split(' ')[0], relatórios: c._count?.reports ?? 0 }))
-    : [
-        { name: 'Cliente A', relatórios: 12 },
-        { name: 'Cliente B', relatórios: 8 },
-        { name: 'Cliente C', relatórios: 15 },
-        { name: 'Cliente D', relatórios: 6 },
-        { name: 'Cliente E', relatórios: 4 },
-      ]
-
+export function DashboardCharts({ chartData, barData, activities }: DashboardChartsProps) {
   return (
     <div className="space-y-6">
       {/* Charts row */}
@@ -99,15 +72,11 @@ export function DashboardCharts({ recentClients = [], recentReports = [] }: Dash
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-base font-semibold text-[var(--color-foreground)]">Crescimento da Agência</h3>
-                <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Últimos 7 meses</p>
+                <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Evolução nos últimos 6 meses</p>
               </div>
-              <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20">
-                <TrendingUp className="w-3 h-3" />
-                +24% vs. mês anterior
-              </span>
             </div>
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={AREA_DATA}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="gradRelatorios" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
@@ -159,8 +128,8 @@ export function DashboardCharts({ recentClients = [], recentReports = [] }: Dash
         >
           <Card className="p-6">
             <div className="mb-6">
-              <h3 className="text-base font-semibold text-[var(--color-foreground)]">Por Cliente</h3>
-              <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Relatórios gerados</p>
+              <h3 className="text-base font-semibold text-[var(--color-foreground)]">Top Clientes</h3>
+              <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Por volume de relatórios</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={barData} layout="vertical">
@@ -193,134 +162,71 @@ export function DashboardCharts({ recentClients = [], recentReports = [] }: Dash
         </motion.div>
       </div>
 
-      {/* Recent lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Clients */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card className="overflow-hidden">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[var(--color-primary)]" />
-                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Clientes Recentes</h3>
+      {/* Activity Feed */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className="overflow-hidden">
+          <div className="p-5 border-b border-[var(--color-border)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[var(--color-primary)]" />
+              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Feed de Atividades</h3>
+            </div>
+          </div>
+          <div className="divide-y divide-[var(--color-border)]">
+            {activities.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-sm text-[var(--color-muted-foreground)]">Nenhuma atividade recente.</p>
               </div>
-              <Link
-                href="/clients"
-                className="text-xs text-[var(--color-primary)] hover:opacity-80 flex items-center gap-1 transition-opacity"
-              >
-                Ver todos <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="divide-y divide-[var(--color-border)]">
-              {recentClients.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-sm text-[var(--color-muted-foreground)]">Nenhum cliente ainda</p>
-                  <Link href="/clients/new" className="text-xs text-[var(--color-primary)] hover:underline mt-1 block">
-                    Cadastrar primeiro cliente →
-                  </Link>
-                </div>
-              ) : (
-                recentClients.slice(0, 5).map((client) => (
-                  <div
-                    key={client.id}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-surface-2)] transition-colors"
-                  >
-                    {client.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={client.logoUrl}
-                        alt={client.name}
-                        className="w-8 h-8 rounded-[var(--radius-md)] object-cover border border-[var(--color-border)]"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] font-bold text-sm">
-                        {client.name[0]}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-foreground)] truncate">{client.name}</p>
-                      <p className="text-xs text-[var(--color-muted-foreground)]">
-                        {client._count?.reports ?? 0} relatório(s)
-                      </p>
-                    </div>
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        client.isActive ? 'bg-emerald-500' : 'bg-[var(--color-muted)]'
-                      }`}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </motion.div>
+            ) : (
+              activities.map((activity) => {
+                let Icon = FileText;
+                let bgClass = 'bg-sky-500/10 text-sky-400';
+                
+                if (activity.type === 'CLIENT') {
+                  Icon = Users;
+                  bgClass = 'bg-emerald-500/10 text-emerald-400';
+                } else if (activity.type === 'INTEGRATION') {
+                  Icon = Plug;
+                  bgClass = 'bg-violet-500/10 text-violet-400';
+                }
 
-        {/* Recent Reports */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card className="overflow-hidden">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-[var(--color-primary)]" />
-                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Relatórios Recentes</h3>
-              </div>
-              <Link
-                href="/reports"
-                className="text-xs text-[var(--color-primary)] hover:opacity-80 flex items-center gap-1 transition-opacity"
-              >
-                Ver todos <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="divide-y divide-[var(--color-border)]">
-              {recentReports.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-sm text-[var(--color-muted-foreground)]">Nenhum relatório ainda</p>
-                  <Link href="/reports/new" className="text-xs text-[var(--color-primary)] hover:underline mt-1 block">
-                    Criar primeiro relatório →
-                  </Link>
-                </div>
-              ) : (
-                recentReports.slice(0, 5).map((report) => (
+                return (
                   <Link
-                    key={report.id}
-                    href={`/reports/${report.id}`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-surface-2)] transition-colors group"
+                    key={activity.id}
+                    href={activity.link}
+                    className="flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-2)] transition-colors group"
                   >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bgClass}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-foreground)] truncate group-hover:text-[var(--color-primary)] transition-colors">
-                        {report.title}
+                      <p className="text-sm font-medium text-[var(--color-foreground)] group-hover:text-[var(--color-primary)] transition-colors">
+                        {activity.title}
                       </p>
                       <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                        {report.client.name} · {format(new Date(report.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        {activity.subtitle}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                        report.status === 'PUBLISHED'
-                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                      }`}
-                    >
-                      {report.status === 'PUBLISHED' ? (
-                        <CheckCircle className="w-3 h-3" />
-                      ) : (
-                        <Clock className="w-3 h-3" />
+                    <div className="text-right">
+                      <p className="text-xs text-[var(--color-muted)]">
+                        {format(activity.date, "dd MMM 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                      {activity.status && (
+                        <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-muted-foreground)]">
+                          {activity.status}
+                        </span>
                       )}
-                      {report.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho'}
-                    </span>
+                    </div>
                   </Link>
-                ))
-              )}
-            </div>
-          </Card>
-        </motion.div>
-      </div>
+                )
+              })
+            )}
+          </div>
+        </Card>
+      </motion.div>
     </div>
   )
 }

@@ -9,7 +9,7 @@ COPY package.json ./
 
 # Because the package-lock is at the project root, we use npm install to generate a new one during build.
 # For production, we omit dev dependencies where possible, but next build requires some dev dependencies.
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Rebuild the source code only when needed
 FROM base AS builder

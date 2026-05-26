@@ -1,0 +1,20 @@
+# Redireciona o .com para o .com.br
+traxsolucoes.com, www.traxsolucoes.com, www.traxsolucoes.com.br {
+    redir https://traxsolucoes.com.br{uri}
+}
+
+# Domínio principal (Landing Page ou Dashboard)
+# Como você usou app. para o web, se não tiver landing page o principal também pode ir pro app
+traxsolucoes.com.br {
+    reverse_proxy web:3001
+}
+
+# Dashboard Web
+app.traxsolucoes.com.br {
+    reverse_proxy web:3001
+}
+
+# API Backend
+api.traxsolucoes.com.br {
+    reverse_proxy api:3000
+}

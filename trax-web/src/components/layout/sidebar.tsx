@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  UserRound,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ const ALL_NAV_ITEMS: Array<{
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'MANAGER', 'VIEWER'] },
   { href: '/clients', label: 'Clientes', icon: Users, roles: ['ADMIN', 'MANAGER'] },
   { href: '/reports', label: 'Relatórios', icon: FileBarChart2, roles: ['ADMIN', 'MANAGER', 'VIEWER'] },
+  { href: '/users', label: 'Equipe', icon: UserRound, roles: ['ADMIN'] },
   { href: '/settings', label: 'Configurações', icon: Settings, roles: ['ADMIN'] },
 ]
 
