@@ -34,6 +34,8 @@ services:
       - PORT=3000
     env_file:
       - .env
+    volumes:
+      - uploads_data_prod:/app/public/uploads
     networks:
       - trax_network
 
@@ -77,6 +79,7 @@ services:
 
 volumes:
   postgres_data_prod:
+  uploads_data_prod:
   caddy_data:
   caddy_config:
 

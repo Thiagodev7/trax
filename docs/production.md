@@ -101,7 +101,7 @@ docker compose -f docker-compose.prod.yml down
 
 - [ ] https://traxsolucoes.com.br carrega a landing
 - [ ] https://admin.traxsolucoes.com.br/admin-panel/login funciona
-- [ ] https://api.traxsolucoes.com.br responde (ex.: login ou endpoint autenticado; health interno em `/api/super-admin/health`)
+- [ ] https://api.traxsolucoes.com.br/api/health responde `{ "status": "ok" }`
 - [ ] Subdomínio de agência existente abre com TLS válido
 - [ ] OAuth Google Ads usa `GOOGLE_ADS_REDIRECT_URI` de produção
 

@@ -20,6 +20,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { MetaConfigModule } from './modules/client/meta-config/meta-config.module';
+import { HealthModule } from './modules/health/health.module';
 import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -61,11 +62,16 @@ import { join } from 'path';
     AuditLogModule,
     SchedulingModule,
     MetaConfigModule,
+    HealthModule,
 
     // --- Servir arquivos estáticos (Uploads) ---
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'public'),
       serveRoot: '/public',
+      serveStaticOptions: {
+        index: false,
+        fallthrough: false,
+      },
     }),
   ],
   providers: [
