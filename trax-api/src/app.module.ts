@@ -1,7 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './modules/tenant/tenant.module';
@@ -16,6 +16,9 @@ import { UploadModule } from './modules/upload/upload.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { EmailModule } from './modules/email/email.module';
 import { UserModule } from './modules/user/user.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -52,6 +55,8 @@ import { join } from 'path';
     OnboardingModule,
     EmailModule,
     UserModule,
+    SuperAdminModule,
+    AuditLogModule,
 
     // --- Servir arquivos estáticos (Uploads) ---
     ServeStaticModule.forRoot({
@@ -63,6 +68,10 @@ import { join } from 'path';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditContextInterceptor,
     },
   ],
 })

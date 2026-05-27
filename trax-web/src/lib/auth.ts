@@ -9,8 +9,11 @@ const loginSchema = z.object({
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
+    // ── Provider para agências/clientes (multi-tenant) ──
     Credentials({
+      id: 'credentials',
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -64,6 +67,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             refreshToken: data.refreshToken,
             expiresIn,
             agencyDomain: domain,
+            isSuperAdmin: false,
+          }
+        } catch {
+          return null
+        }
+      },
+    }),
+
+    // ── Provider para o super-admin do SaaS ──
+    Credentials({
+      id: 'super-admin',
+      name: 'super-admin',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Senha', type: 'password' },
+      },
+      async authorize(credentials) {
+        const parsed = loginSchema.safeParse(credentials)
+        if (!parsed.success) return null
+
+        try {
+          const res = await fetch(`${process.env.API_URL}/api/v1/super-admin/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: parsed.data.email,
+              password: parsed.data.password,
+            }),
+          })
+
+          if (!res.ok) return null
+          const data = await res.json()
+
+          return {
+            id: data.id,
+            email: data.email,
+            name: data.name,
+            role: 'SUPER_ADMIN',
+            accessToken: data.accessToken,
+            expiresIn: data.expiresIn ?? 15 * 60,
+            isSuperAdmin: true,
           }
         } catch {
           return null
@@ -72,6 +116,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    authorized() {
+      // Roteamento e proteção por hostname ficam no middleware.ts
+      return true
+    },
     async jwt({ token, user }): Promise<any> {
       if (user) {
         const u = user as Record<string, unknown>
@@ -87,9 +135,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           refreshToken: u.refreshToken,
           accessTokenExpires: Date.now() + expiresIn * 1000,
           agencyDomain: u.agencyDomain,
+          isSuperAdmin: u.isSuperAdmin ?? false,
           error: undefined,
         }
       }
+
+      // Super-admin: não usa refresh token (token de vida longa)
+      if (token.isSuperAdmin) return token
 
       if (shouldRefreshAccessToken(token as Record<string, unknown>)) {
         return refreshAccessToken(token as Record<string, unknown>)
@@ -104,6 +156,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       u.agencyId = token.agencyId as string
       u.agency = token.agency as unknown
       u.clients = token.clients as unknown
+      u.isSuperAdmin = token.isSuperAdmin as boolean
       ;(session as { accessToken?: string; error?: string }).accessToken =
         token.accessToken as string
       if (token.error === 'RefreshTokenError') {

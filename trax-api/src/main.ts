@@ -19,8 +19,23 @@ async function bootstrap() {
 
   // --- Security ---
   app.use(helmet());
+  const allowedOrigins = configService
+    .get<string>('CORS_ORIGINS', '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const tenantOriginPattern =
+    /^https:\/\/([a-z0-9-]+\.)*traxsolucoes\.com(\.br)?$/;
+
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGINS', '').split(','),
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || tenantOriginPattern.test(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });

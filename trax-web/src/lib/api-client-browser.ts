@@ -11,8 +11,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+import { getPublicApiV1Base } from '@/lib/api-base-url'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
@@ -43,7 +42,7 @@ export function useApiClient() {
       }
 
       let token = accessToken
-      let res = await fetch(`${API_URL}/api/v1${path}`, {
+      let res = await fetch(`${getPublicApiV1Base()}${path}`, {
         method,
         headers: buildHeaders(token),
         body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -54,7 +53,7 @@ export function useApiClient() {
         const newToken = updated?.accessToken
         if (newToken && newToken !== token) {
           token = newToken
-          res = await fetch(`${API_URL}/api/v1${path}`, {
+          res = await fetch(`${getPublicApiV1Base()}${path}`, {
             method,
             headers: buildHeaders(token),
             body: body !== undefined ? JSON.stringify(body) : undefined,

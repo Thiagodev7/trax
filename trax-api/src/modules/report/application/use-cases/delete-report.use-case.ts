@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { AuditAction, AuditEntityType, UserRole } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AuthenticatedUser } from '@common/decorators/current-user.decorator';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 interface DeleteReportInput {
   agencyId: string;
@@ -11,7 +12,10 @@ interface DeleteReportInput {
 
 @Injectable()
 export class DeleteReportUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute({ agencyId, reportId, user }: DeleteReportInput): Promise<void> {
     const report = await this.prisma.report.findFirst({
@@ -20,13 +24,22 @@ export class DeleteReportUseCase {
 
     if (!report) throw new NotFoundException('Relatório não encontrado');
 
-    // Apenas AGENCY_ADMIN pode excluir relatórios
     if (user.role !== UserRole.AGENCY_ADMIN) {
       throw new ForbiddenException('Apenas administradores podem excluir relatórios');
     }
 
     await this.prisma.report.delete({
       where: { id: reportId },
+    });
+
+    await this.auditLog.record({
+      agencyId,
+      userId: user.sub,
+      action: AuditAction.DELETE,
+      entityType: AuditEntityType.REPORT,
+      entityId: report.id,
+      entityName: report.title,
+      description: `Relatório "${report.title}" excluído`,
     });
   }
 }

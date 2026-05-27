@@ -17,6 +17,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* must be set at build time (embedded in client bundle)
+ARG NEXT_PUBLIC_API_URL=https://api.traxsolucoes.com.br
+ARG NEXT_PUBLIC_TRAX_BASE_DOMAIN=traxsolucoes.com.br
+# API_URL for server-side rewrites (proxy /api/v1 → trax-api container)
+ARG API_URL=http://api:3000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_TRAX_BASE_DOMAIN=$NEXT_PUBLIC_TRAX_BASE_DOMAIN
+ENV API_URL=$API_URL
+
 # Next.js telemetry disable
 ENV NEXT_TELEMETRY_DISABLED=1
 

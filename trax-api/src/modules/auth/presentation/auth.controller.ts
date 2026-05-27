@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   HttpCode,
   HttpStatus,
@@ -20,6 +21,10 @@ import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { GetMeUseCase } from '../application/use-cases/get-me.use-case';
+import { UpdatePasswordUseCase } from '../application/use-cases/update-password.use-case';
+import { UpdateNotificationPreferencesUseCase } from '../application/use-cases/update-notification-preferences.use-case';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 const REFRESH_COOKIE_NAME = 'trax_refresh';
 const COOKIE_OPTIONS = {
@@ -38,6 +43,8 @@ export class AuthController {
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getMeUseCase: GetMeUseCase,
+    private readonly updatePasswordUseCase: UpdatePasswordUseCase,
+    private readonly updateNotificationPreferencesUseCase: UpdateNotificationPreferencesUseCase,
   ) {}
 
   @Public()
@@ -104,5 +111,27 @@ export class AuthController {
   @ApiOperation({ summary: 'Retorna dados do usuário autenticado' })
   async me(@CurrentUser() user: AuthenticatedUser) {
     return this.getMeUseCase.execute(user.sub);
+  }
+
+  @Patch('me/password')
+  @Version('1')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Altera a senha do usuário autenticado' })
+  async updatePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdatePasswordDto,
+  ) {
+    return this.updatePasswordUseCase.execute(user.sub, dto);
+  }
+
+  @Patch('me/notifications')
+  @Version('1')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Atualiza preferências de notificação por e-mail' })
+  async updateNotifications(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    return this.updateNotificationPreferencesUseCase.execute(user.sub, dto);
   }
 }

@@ -56,6 +56,33 @@ enum ReportStatus {
   ARCHIVED
 }
 
+enum AuditActorType {
+  AGENCY_USER
+  SUPER_ADMIN
+  SYSTEM
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  PUBLISH
+  SYNC
+  TEST
+  INVITE
+}
+
+enum AuditEntityType {
+  AGENCY
+  CLIENT
+  USER
+  REPORT
+  INTEGRATION
+  AUTH
+}
+
 // ---------------------------------------------------------------------------
 // AGENCY — O tenant raiz. Cada agência é isolada.
 // ---------------------------------------------------------------------------
@@ -95,9 +122,10 @@ model Agency {
   updatedAt DateTime @updatedAt
 
   // Relations
-  clients Client[]
-  users   User[]
-  reports Report[]
+  clients   Client[]
+  users     User[]
+  reports   Report[]
+  auditLogs AgencyAuditLog[]
 
   @@map("agencies")
 }
@@ -141,13 +169,19 @@ model User {
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
   emailVerifiedAt DateTime?
+  // Preferências de notificação por e-mail
+  notifyReportPublished   Boolean @default(true) @map("notify_report_published")
+  notifyIntegrationErrors Boolean @default(true) @map("notify_integration_errors")
+  notifyNewClient         Boolean @default(false) @map("notify_new_client")
+  notifyWeeklySummary     Boolean @default(true) @map("notify_weekly_summary")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Relations
-  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency        Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
   userClients   UserClient[] // Clientes que o usuário pode visualizar
+  auditLogs     AgencyAuditLog[]
 
   // Email único POR AGÊNCIA (não global — mesma pessoa pode ser user em 2 agências)
   @@unique([agencyId, email])
@@ -279,6 +313,51 @@ model Report {
   @@index([agencyId, clientId, createdAt(sort: Desc)])
   @@index([shareToken])
   @@map("reports")
+}
+
+// ---------------------------------------------------------------------------
+// SUPER_ADMIN — Administradores da plataforma Trax (não é user de agência)
+// ---------------------------------------------------------------------------
+model SuperAdmin {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  name         String   @db.VarChar(255)
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("super_admins")
+}
+
+// ---------------------------------------------------------------------------
+// AGENCY_AUDIT_LOG — Registro de ações realizadas dentro de cada agência
+// ---------------------------------------------------------------------------
+model AgencyAuditLog {
+  id           String          @id @default(uuid()) @db.Uuid
+  agencyId     String?         @db.Uuid
+  actorType    AuditActorType
+  userId       String?         @db.Uuid
+  superAdminId String?         @db.Uuid
+  action       AuditAction
+  entityType   AuditEntityType
+  entityId     String?         @db.VarChar(255)
+  entityName   String?         @db.VarChar(255)
+  description  String          @db.VarChar(512)
+  metadata     Json?
+  ipAddress    String?         @db.VarChar(45)
+  userAgent    String?         @db.VarChar(512)
+  createdAt    DateTime        @default(now())
+
+  agency Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, createdAt(sort: Desc)])
+  @@index([agencyId, entityType, createdAt(sort: Desc)])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("agency_audit_logs")
 }
 
 // ---------------------------------------------------------------------------

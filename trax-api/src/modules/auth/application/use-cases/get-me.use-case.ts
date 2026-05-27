@@ -16,6 +16,10 @@ export class GetMeUseCase {
         role: true,
         avatarUrl: true,
         lastLoginAt: true,
+        notifyReportPublished: true,
+        notifyIntegrationErrors: true,
+        notifyNewClient: true,
+        notifyWeeklySummary: true,
         createdAt: true,
         agency: {
           select: {
@@ -51,6 +55,12 @@ export class GetMeUseCase {
       avatarUrl: user.avatarUrl,
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
+      notifications: {
+        notifyReportPublished: user.notifyReportPublished,
+        notifyIntegrationErrors: user.notifyIntegrationErrors,
+        notifyNewClient: user.notifyNewClient,
+        notifyWeeklySummary: user.notifyWeeklySummary,
+      },
       agency: user.agency,
       clients: user.userClients.map((uc) => uc.client),
     };

@@ -1,16 +1,20 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { ReportStatus } from '@prisma/client';
+import { AuditAction, AuditEntityType, ReportStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
 export class PublishReportUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(agencyId: string, reportId: string) {
     const report = await this.prisma.report.findFirst({
       where: { id: reportId, agencyId },
-      select: { id: true, status: true },
+      select: { id: true, title: true, status: true },
     });
 
     if (!report) {
@@ -21,10 +25,9 @@ export class PublishReportUseCase {
       throw new BadRequestException('Relatórios arquivados não podem ser publicados');
     }
 
-    // Gera share token único (URL-safe, 48 bytes = 64 chars base64url)
     const shareToken = randomBytes(48).toString('base64url');
 
-    return this.prisma.report.update({
+    const published = await this.prisma.report.update({
       where: { id: reportId },
       data: {
         status: ReportStatus.PUBLISHED,
@@ -39,5 +42,16 @@ export class PublishReportUseCase {
         publishedAt: true,
       },
     });
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.PUBLISH,
+      entityType: AuditEntityType.REPORT,
+      entityId: published.id,
+      entityName: published.title,
+      description: `Relatório "${published.title}" publicado`,
+    });
+
+    return published;
   }
 }

@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { AuditAction, AuditActorType, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import { decryptCredentials } from '../crypto.helper';
 import { MetaAdsService } from '../services/meta-ads.service';
 import { InstagramService } from '../services/instagram.service';
@@ -34,6 +36,7 @@ export class SyncIntegrationUseCase {
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async execute(opts: SyncOptions): Promise<{ synced: number }> {
@@ -77,8 +80,29 @@ export class SyncIntegrationUseCase {
         where: { id: integration.id },
         data: { status: 'ERROR', lastErrorMsg: err.message },
       });
+      await this.auditLog.record({
+        agencyId: opts.agencyId,
+        actorType: AuditActorType.SYSTEM,
+        action: AuditAction.SYNC,
+        entityType: AuditEntityType.INTEGRATION,
+        entityId: integration.id,
+        entityName: integration.displayName ?? integration.provider,
+        description: `Sync falhou: ${integration.provider}`,
+        metadata: { error: err.message, synced: 0 },
+      });
       throw new BadRequestException(err.message);
     }
+
+    await this.auditLog.record({
+      agencyId: opts.agencyId,
+      actorType: AuditActorType.SYSTEM,
+      action: AuditAction.SYNC,
+      entityType: AuditEntityType.INTEGRATION,
+      entityId: integration.id,
+      entityName: integration.displayName ?? integration.provider,
+      description: `Sync concluído: ${integration.provider} (${synced} registros)`,
+      metadata: { synced, provider: integration.provider },
+    });
 
     return { synced };
   }

@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   agencyId: string;
   role: string;
   email: string;
+  isSuperAdmin?: boolean;
 }
 
 /**

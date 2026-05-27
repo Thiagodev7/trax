@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { UploadCloud, Trash2, Loader2, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getPublicApiBaseUrl, getPublicApiV1Base } from '@/lib/api-base-url'
 
 interface ImageUploadProps {
   value: string | null
@@ -68,7 +69,6 @@ export function ImageUpload({
     formData.append('file', file)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
       const headers: Record<string, string> = {}
       
       if (session?.accessToken) {
@@ -78,7 +78,7 @@ export function ImageUpload({
         headers['X-Agency-Domain'] = window.location.hostname
       }
 
-      const res = await fetch(`${apiUrl}/api/v1/upload`, {
+      const res = await fetch(`${getPublicApiV1Base()}/upload`, {
         method: 'POST',
         headers,
         body: formData,
@@ -87,7 +87,7 @@ export function ImageUpload({
       if (!res.ok) throw new Error('Falha no upload')
       
       const data = await res.json()
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${data.url}`
+      const url = `${getPublicApiBaseUrl()}${data.url}`
       onChange(url)
       toast.success('Imagem enviada com sucesso!')
     } catch (err) {

@@ -5,6 +5,7 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { CurrentTenant } from '@common/decorators/current-tenant.decorator';
 import { GetAgencyBrandingUseCase } from '../application/use-cases/get-agency-branding.use-case';
 import { UpdateAgencyBrandingUseCase } from '../application/use-cases/update-agency-branding.use-case';
+import { GetAgencyPlanUseCase } from '../application/use-cases/get-agency-plan.use-case';
 import { UpdateAgencyBrandingDto } from './dto/update-agency-branding.dto';
 
 @ApiBearerAuth()
@@ -14,7 +15,16 @@ export class AgencyController {
   constructor(
     private readonly getAgencyBranding: GetAgencyBrandingUseCase,
     private readonly updateAgencyBranding: UpdateAgencyBrandingUseCase,
+    private readonly getAgencyPlan: GetAgencyPlanUseCase,
   ) {}
+
+  @Get('plan')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN)
+  @ApiOperation({ summary: 'Retorna plano e uso atual da agência' })
+  async getPlan(@CurrentTenant('agencyId') agencyId: string) {
+    return this.getAgencyPlan.execute(agencyId);
+  }
 
   @Get('branding')
   @Version('1')

@@ -1,10 +1,12 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { AuditAction, AuditEntityType } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '@/prisma/prisma.service';
 import { getAgencyId } from '@common/context/tenant.context';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import { LoginDto } from '../../presentation/dto/login.dto';
 
 export interface TokenPair {
@@ -26,6 +28,7 @@ export class LoginUseCase {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async execute(dto: LoginDto, meta?: LoginMeta): Promise<TokenPair> {
@@ -66,6 +69,18 @@ export class LoginUseCase {
     });
 
     this.logger.log(`Login: ${user.email} (agência ${agencyId})`);
+
+    await this.auditLog.record({
+      agencyId,
+      userId: user.id,
+      action: AuditAction.LOGIN,
+      entityType: AuditEntityType.AUTH,
+      entityId: user.id,
+      entityName: user.name,
+      description: `${user.name} fez login`,
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+    });
 
     const expiresIn = 15 * 60; // 15 minutos em segundos
     return { accessToken, refreshToken, expiresIn };

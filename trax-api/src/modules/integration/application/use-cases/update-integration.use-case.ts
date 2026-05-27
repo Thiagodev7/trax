@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateIntegrationDto } from '../../presentation/dto/update-integration.dto';
 import { encryptCredentials } from '../crypto.helper';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
 export class UpdateIntegrationUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(agencyId: string, integrationId: string, dto: UpdateIntegrationDto) {
     const existing = await this.prisma.integration.findFirst({
@@ -17,7 +22,7 @@ export class UpdateIntegrationUseCase {
       ? encryptCredentials(dto.credentials)
       : undefined;
 
-    return this.prisma.integration.update({
+    const integration = await this.prisma.integration.update({
       where: { id: integrationId },
       data: {
         ...(dto.displayName !== undefined && { displayName: dto.displayName }),
@@ -39,5 +44,16 @@ export class UpdateIntegrationUseCase {
         updatedAt: true,
       },
     });
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.INTEGRATION,
+      entityId: integration.id,
+      entityName: integration.displayName ?? integration.provider,
+      description: `Integração ${integration.provider} atualizada`,
+    });
+
+    return integration;
   }
 }

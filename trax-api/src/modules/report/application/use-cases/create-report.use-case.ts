@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateReportDto } from '../../presentation/dto/create-report.dto';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
 export class CreateReportUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(agencyId: string, dto: CreateReportDto) {
-    // Valida que o cliente pertence a esta agência
     const client = await this.prisma.client.findFirst({
       where: { id: dto.clientId, agencyId },
       select: { id: true },
@@ -16,7 +20,6 @@ export class CreateReportUseCase {
       throw new BadRequestException('Cliente não encontrado nesta agência');
     }
 
-    // Valida as integrações, se informadas
     if (dto.integrationIds?.length) {
       const integrations = await this.prisma.integration.findMany({
         where: {
@@ -33,7 +36,7 @@ export class CreateReportUseCase {
       }
     }
 
-    return this.prisma.report.create({
+    const report = await this.prisma.report.create({
       data: {
         agencyId,
         clientId: dto.clientId,
@@ -58,5 +61,16 @@ export class CreateReportUseCase {
         createdAt: true,
       },
     });
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.REPORT,
+      entityId: report.id,
+      entityName: report.title,
+      description: `Relatório "${report.title}" criado`,
+    });
+
+    return report;
   }
 }

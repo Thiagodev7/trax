@@ -16,6 +16,22 @@ async function main() {
   console.log('🌱 Iniciando seed do banco de dados Trax...\n');
 
   // ─────────────────────────────────────────────────────
+  // 0. Super-Admin da plataforma
+  // ─────────────────────────────────────────────────────
+  const superAdminPassword = await bcrypt.hash('Tr@x2026!SuperAdmin', BCRYPT_ROUNDS);
+  await (prisma as any).superAdmin.upsert({
+    where: { email: 'super@traxsolucoes.com.br' },
+    update: { passwordHash: superAdminPassword },
+    create: {
+      email: 'super@traxsolucoes.com.br',
+      passwordHash: superAdminPassword,
+      name: 'Super Admin',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Super-admin: super@traxsolucoes.com.br | senha: Tr@x2026!SuperAdmin`);
+
+  // ─────────────────────────────────────────────────────
   // 1. Agência Demo (Tenant Principal)
   // ─────────────────────────────────────────────────────
   const agency = await prisma.agency.upsert({
@@ -203,7 +219,11 @@ async function main() {
   console.log(`   AGENCY_VIEWER → viewer@agenciademo.com / viewer123!`);
   console.log(`   CLIENT_VIEWER → contato@techstore.com.br / cliente123!`);
   console.log(`\n🔗 Relatório público (sem login):`);
-  console.log(`   GET /api/v1/reports/shared/${shareToken}\n`);
+  console.log(`   GET /api/v1/reports/shared/${shareToken}`);
+  console.log(`\n🔐 Super-Admin:`);
+  console.log(`   Email: super@traxsolucoes.com.br`);
+  console.log(`   Senha: Tr@x2026!SuperAdmin`);
+  console.log(`   URL:   https://admin.traxsolucoes.com.br\n`);
 }
 
 main()

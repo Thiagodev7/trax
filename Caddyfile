@@ -1,20 +1,29 @@
-# Redireciona o .com para o .com.br
-traxsolucoes.com, www.traxsolucoes.com, www.traxsolucoes.com.br {
-    redir https://traxsolucoes.com.br{uri}
+{
+    on_demand_tls {
+        ask http://web:3001/api/tls-verify
+    }
 }
 
-# Domínio principal (Landing Page ou Dashboard)
-# Como você usou app. para o web, se não tiver landing page o principal também pode ir pro app
+traxsolucoes.com, www.traxsolucoes.com, www.traxsolucoes.com.br {
+    redir https://traxsolucoes.com.br{uri} permanent
+}
+
 traxsolucoes.com.br {
     reverse_proxy web:3001
 }
 
-# Dashboard Web
-app.traxsolucoes.com.br {
+admin.traxsolucoes.com.br {
     reverse_proxy web:3001
 }
 
-# API Backend
 api.traxsolucoes.com.br {
     reverse_proxy api:3000
+}
+
+# Subdomínios dinâmicos de agências (on_demand TLS)
+*.traxsolucoes.com.br {
+    tls {
+        on_demand
+    }
+    reverse_proxy web:3001
 }

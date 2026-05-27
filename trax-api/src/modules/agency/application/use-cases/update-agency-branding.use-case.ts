@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { UpdateAgencyBrandingDto } from '../../presentation/dto/update-agency-branding.dto';
 import { invalidateTenantCache } from '@common/middleware/tenant.middleware';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
 export class UpdateAgencyBrandingUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(agencyId: string, dto: UpdateAgencyBrandingDto) {
     const updated = await this.prisma.agency.update({
@@ -54,6 +59,16 @@ export class UpdateAgencyBrandingUseCase {
     if (dto.customDomain) {
       invalidateTenantCache(dto.customDomain);
     }
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.AGENCY,
+      entityId: updated.id,
+      entityName: updated.name,
+      description: `Branding da agência "${updated.name}" atualizado`,
+      metadata: { fields: Object.keys(dto) },
+    });
 
     return updated;
   }

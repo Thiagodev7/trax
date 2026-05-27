@@ -13,8 +13,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { getPublicApiV1Base } from '@/lib/api-base-url'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'traxsolucoes.com.br'
 
 // ─── Schemas per step ────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function Step1Form({ onNext, initial }: { onNext: (d: Step1) => void; initial?: 
     if (!value || value.length < 3) { setSlugStatus('idle'); return }
     setSlugStatus('checking')
     try {
-      const res = await fetch(`${API_URL}/api/v1/onboarding/check-slug?slug=${value}`)
+      const res = await fetch(`${getPublicApiV1Base()}/onboarding/check-slug?slug=${value}`)
       const data = await res.json()
       setSlugStatus(data.available ? 'available' : 'taken')
     } catch {
@@ -389,7 +389,7 @@ export default function SignupPage() {
     if (!formData.step1 || !formData.step2 || !formData.step3) return
     setIsSubmitting(true)
     try {
-      const response = await fetch(`${API_URL}/api/v1/onboarding/agency`, {
+      const response = await fetch(`${getPublicApiV1Base()}/onboarding/agency`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

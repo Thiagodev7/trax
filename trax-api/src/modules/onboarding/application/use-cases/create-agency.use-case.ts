@@ -1,7 +1,9 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import { AuditAction, AuditActorType, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateAgencyDto } from '../../presentation/dto/create-agency.dto';
 import { EmailService } from '../../../email/application/services/email.service';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -9,6 +11,7 @@ export class CreateAgencyUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async execute(dto: CreateAgencyDto) {
@@ -66,6 +69,17 @@ export class CreateAgencyUseCase {
 
     // Send welcome email asynchronously
     this.emailService.sendWelcomeEmail(dto.adminEmail, dto.agencyName, dto.adminName, slug);
+
+    await this.auditLog.record({
+      agencyId: result.agency.id,
+      actorType: AuditActorType.SYSTEM,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.AGENCY,
+      entityId: result.agency.id,
+      entityName: result.agency.name,
+      description: `Agência "${result.agency.name}" criada via onboarding`,
+      metadata: { slug, adminEmail: dto.adminEmail },
+    });
 
     return {
       success: true,

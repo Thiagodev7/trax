@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { decryptCredentials } from '../crypto.helper';
 import { MetaAdsService } from '../services/meta-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
 export class TestIntegrationUseCase {
@@ -14,6 +16,7 @@ export class TestIntegrationUseCase {
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async execute(agencyId: string, integrationId: string): Promise<{ valid: boolean; name?: string; error?: string }> {
@@ -48,12 +51,33 @@ export class TestIntegrationUseCase {
         where: { id: integrationId },
         data: { status: 'ERROR', lastErrorMsg: err.message },
       });
+      await this.auditLog.record({
+        agencyId,
+        action: AuditAction.TEST,
+        entityType: AuditEntityType.INTEGRATION,
+        entityId: integration.id,
+        entityName: integration.displayName ?? integration.provider,
+        description: `Teste de conexão falhou: ${integration.provider}`,
+        metadata: { error: err.message },
+      });
       return { valid: false, error: err.message };
     }
 
     await this.prisma.integration.update({
       where: { id: integrationId },
       data: { status: result.valid ? 'ACTIVE' : 'ERROR' },
+    });
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.TEST,
+      entityType: AuditEntityType.INTEGRATION,
+      entityId: integration.id,
+      entityName: integration.displayName ?? integration.provider,
+      description: result.valid
+        ? `Teste de conexão OK: ${integration.provider}`
+        : `Teste de conexão falhou: ${integration.provider}`,
+      metadata: { valid: result.valid },
     });
 
     return result;

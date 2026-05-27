@@ -25,7 +25,6 @@ export function Header({ session, tenant: _tenant }: HeaderProps) {
 
   return (
     <header className="h-16 border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
-      {/* Search */}
       <div className="flex items-center gap-4 flex-1">
         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-[var(--color-muted)] max-w-xs w-full focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/15 transition-all">
           <Search className="w-4 h-4 shrink-0" />
@@ -40,7 +39,6 @@ export function Header({ session, tenant: _tenant }: HeaderProps) {
         </div>
       </div>
 
-      {/* Right section */}
       <div className="flex items-center gap-3">
         {roleLabel && (
           <Badge variant="default" className="hidden sm:inline-flex">
@@ -48,50 +46,15 @@ export function Header({ session, tenant: _tenant }: HeaderProps) {
           </Badge>
         )}
 
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              className="relative p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors rounded-full hover:bg-[var(--color-surface-2)] outline-none"
-              aria-label="Notificações"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className="z-50 w-[320px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-xl overflow-hidden data-[side=bottom]:animate-fade-in"
-              sideOffset={8}
-              align="end"
-            >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                <span className="text-sm font-semibold text-[var(--color-foreground)]">Notificações</span>
-                <button className="text-xs text-[var(--color-primary)] hover:underline font-medium">Marcar lidas</button>
-              </div>
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar divide-y divide-[var(--color-border)]">
-                {[
-                  { id: 1, title: 'Integração Meta Ads falhou', desc: 'A sincronização para o cliente "TechCorp" falhou.', time: 'há 10 min', unread: true },
-                  { id: 2, title: 'Relatório Publicado', desc: 'O relatório mensal de "Store Online" foi publicado com sucesso.', time: 'há 2 horas', unread: true },
-                  { id: 3, title: 'Novo Lead', desc: 'Alguém preencheu o formulário de prospecção.', time: 'há 1 dia', unread: false },
-                ].map((notif) => (
-                  <div key={notif.id} className={cn("p-4 transition-colors hover:bg-[var(--color-surface-2)] cursor-pointer", notif.unread ? 'bg-[var(--color-primary)]/5' : '')}>
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={cn("text-sm text-[var(--color-foreground)]", notif.unread ? "font-semibold" : "font-medium")}>{notif.title}</p>
-                      {notif.unread && <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] shrink-0 mt-1" />}
-                    </div>
-                    <p className="text-xs text-[var(--color-muted-foreground)] mt-1 line-clamp-2">{notif.desc}</p>
-                    <p className="text-[10px] text-[var(--color-muted)] mt-2 font-medium">{notif.time}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="p-2 border-t border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                <button className="w-full py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors text-center rounded-md hover:bg-[var(--color-surface)]">
-                  Ver todas as notificações
-                </button>
-              </div>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        {showSettings && (
+          <Link
+            href="/settings?tab=notifications"
+            className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors rounded-full hover:bg-[var(--color-surface-2)]"
+            aria-label="Preferências de notificação"
+          >
+            <Bell className="w-5 h-5" />
+          </Link>
+        )}
 
         <div className="w-px h-6 bg-[var(--color-border)]" />
 

@@ -4,13 +4,17 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { UserRole } from '@prisma/client';
+import { AuditAction, AuditEntityType, UserRole } from '@prisma/client';
 import { InviteUserDto } from '../../presentation/dto/invite-user.dto';
+import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class InviteUserUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(agencyId: string, dto: InviteUserDto) {
     // Verificar se email já existe na agência
@@ -52,6 +56,16 @@ export class InviteUserUseCase {
         skipDuplicates: true,
       });
     }
+
+    await this.auditLog.record({
+      agencyId,
+      action: AuditAction.INVITE,
+      entityType: AuditEntityType.USER,
+      entityId: user.id,
+      entityName: user.name,
+      description: `Usuário "${user.name}" convidado (${user.role})`,
+      metadata: { email: user.email, role: user.role },
+    });
 
     return {
       id: user.id,

@@ -49,11 +49,14 @@ export class TenantAuthGuard extends AuthGuard('jwt') {
     }
 
     // 3. Validação Cross-Tenant: JWT.agencyId deve bater com o tenant do domínio
-    const tenantAgencyId = getAgencyId();
-    if (user.agencyId !== tenantAgencyId) {
-      throw new ForbiddenException(
-        'Acesso negado: token não pertence a esta agência',
-      );
+    // Super-admin pula essa validação (não tem agencyId)
+    if (!(user as any).isSuperAdmin) {
+      const tenantAgencyId = getAgencyId();
+      if (user.agencyId !== tenantAgencyId) {
+        throw new ForbiddenException(
+          'Acesso negado: token não pertence a esta agência',
+        );
+      }
     }
 
     // 4. Verificação de roles

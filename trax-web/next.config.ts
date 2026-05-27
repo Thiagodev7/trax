@@ -4,7 +4,15 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3001', 'app.traxsolucoes.com.br'],
+      allowedOrigins: [
+        'localhost:3001',
+        'traxsolucoes.com.br',
+        'www.traxsolucoes.com.br',
+        'admin.traxsolucoes.com.br',
+        'admin.traxsolucoes.com',
+        '*.traxsolucoes.com.br',
+        '*.traxsolucoes.com',
+      ],
     },
   },
   images: {
@@ -12,6 +20,21 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**' },
       { protocol: 'http', hostname: 'localhost' },
     ],
+  },
+  // Proxy same-origin: browser chama /api/v1 no subdomínio da agência
+  // e o Next encaminha para o trax-api (evita CORS e TLS cross-domain).
+  async rewrites() {
+    const apiOrigin = process.env.API_URL ?? 'http://localhost:3000'
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiOrigin}/api/v1/:path*`,
+      },
+      {
+        source: '/public/:path*',
+        destination: `${apiOrigin}/public/:path*`,
+      },
+    ]
   },
   // Garante que o header Host seja acessível nos Server Components
   // para resolução de tenant

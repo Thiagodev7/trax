@@ -41,12 +41,18 @@ services:
     build:
       context: ./trax-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://api.traxsolucoes.com.br
+        NEXT_PUBLIC_TRAX_BASE_DOMAIN: traxsolucoes.com.br
+        API_URL: http://api:3000
     container_name: trax_web_prod
     restart: always
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - NEXT_PUBLIC_API_URL=https://api.traxsolucoes.com.br/api
+      - API_URL=http://api:3000
+      - NEXT_PUBLIC_API_URL=https://api.traxsolucoes.com.br
+      - NEXT_PUBLIC_TRAX_BASE_DOMAIN=traxsolucoes.com.br
     env_file:
       - .env
     networks:

@@ -20,7 +20,12 @@ const tenantCache = new Map<string, CachedTenant>();
 const CACHE_TTL_MS = Number(process.env.TENANT_CACHE_TTL ?? 300) * 1000;
 
 // Rotas que não precisam de resolução de tenant (health check, etc.)
-const PUBLIC_PATHS_SKIP_TENANT = ['/api/health', '/api/docs', '/api/v1/onboarding'];
+const PUBLIC_PATHS_SKIP_TENANT = [
+  '/api/health',
+  '/api/docs',
+  '/api/v1/onboarding',
+  '/api/v1/super-admin',
+];
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
