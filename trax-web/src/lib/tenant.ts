@@ -1,3 +1,5 @@
+import { isAdminHost, isRootDomain } from '@/lib/domains'
+
 export interface TenantBranding {
   agencyId: string
   name: string
@@ -43,6 +45,11 @@ const DEFAULT_BRANDING: TenantBranding = {
 }
 
 export async function resolveTenant(host: string): Promise<TenantBranding> {
+  const hostname = host.split(':')[0].toLowerCase()
+  if (isRootDomain(hostname) || isAdminHost(hostname)) {
+    return DEFAULT_BRANDING
+  }
+
   try {
     const res = await fetch(`${process.env.API_URL}/api/v1/tenant/resolve`, {
       headers: { 'X-Agency-Domain': host },

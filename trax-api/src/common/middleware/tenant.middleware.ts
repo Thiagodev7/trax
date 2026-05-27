@@ -9,6 +9,7 @@ import {
   extractSlugFromHost,
   getDevLocalhostFallbackSlug,
   isAdminHost,
+  isReservedHost,
 } from '@common/config/domains';
 import { PrismaService } from '@/prisma/prisma.service';
 import { tenantStorage } from '@common/context/tenant.context';
@@ -49,6 +50,11 @@ export class TenantMiddleware implements NestMiddleware {
 
     if (isAdminHost(hostname)) {
       return next();
+    }
+
+    if (req.path.includes('/tenant/resolve') && isReservedHost(hostname)) {
+      res.status(404).json({ message: `Tenant não encontrado para o domínio: ${hostname}` });
+      return;
     }
 
     const tenant = await this.resolveTenant(hostname);
@@ -109,7 +115,9 @@ export class TenantMiddleware implements NestMiddleware {
     });
 
     if (!agency) {
-      this.logger.debug(`Domínio não mapeado a nenhuma agência: ${hostname}`);
+      if (!isReservedHost(hostname)) {
+        this.logger.debug(`Domínio não mapeado a nenhuma agência: ${hostname}`);
+      }
       return null;
     }
 
