@@ -26,7 +26,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const { statusCode, message, error } = this.mapException(exception);
+    const { statusCode, message, error } = this.mapException(exception, request.url);
 
     const body: ErrorResponse = {
       statusCode,
@@ -49,7 +49,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     response.status(statusCode).json(body);
   }
 
-  private mapException(exception: unknown): {
+  private mapException(
+    exception: unknown,
+    path: string,
+  ): {
     statusCode: number;
     message: string | string[];
     error: string;
@@ -77,6 +80,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return { statusCode: 409, message: 'Conflito: dado já existe', error: 'Conflict' };
       }
       return { statusCode: 400, message: 'Erro de banco de dados', error: 'DatabaseError' };
+    }
+
+    if (
+      exception instanceof Error &&
+      (exception as NodeJS.ErrnoException).code === 'ENOENT' &&
+      path.startsWith('/public/')
+    ) {
+      return { statusCode: 404, message: 'Arquivo não encontrado', error: 'NotFound' };
     }
 
     // Erros desconhecidos → 500 (sem vazar detalhes em produção)
