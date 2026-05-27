@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { getPublicApiBaseUrl } from '@/lib/api-base-url'
+import { getBaseDomain, tenantDisplayUrl } from '@/lib/domains'
 
 const SERVER_API_URL = process.env.API_URL ?? 'http://api:3000'
 
@@ -25,7 +26,7 @@ export const ROLE_LABELS: Record<string, string> = {
   CLIENT_VIEWER: 'Cliente',
 }
 
-export const BASE_DOMAIN = process.env.NEXT_PUBLIC_TRAX_BASE_DOMAIN ?? 'traxsolucoes.com.br'
+export const BASE_DOMAIN = getBaseDomain()
 
 export interface PlatformStats {
   totalAgencies: number
@@ -325,5 +326,5 @@ export function getAdminClientBaseUrl() {
 }
 
 export function tenantUrl(slug: string) {
-  return `https://${slug}.${BASE_DOMAIN}`
+  return tenantDisplayUrl(slug)
 }

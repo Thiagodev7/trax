@@ -7,6 +7,7 @@
 import { PrismaClient, UserRole, ReportStatus, AgencyPlan, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
+import { TRON_TEMPLATE } from '../src/modules/client/meta-config/meta-config.template';
 
 const prisma = new PrismaClient();
 
@@ -127,6 +128,48 @@ async function main() {
   console.log(`✅ Clientes: ${client1.name}, ${client2.name}`);
 
   // ─────────────────────────────────────────────────────
+  // 3b. Cliente Tron Sistemas com configuração Meta Ads
+  // ─────────────────────────────────────────────────────
+  const tronClient = await prisma.client.upsert({
+    where: { id: 'aaaaaaaa-0001-0000-0000-000000000003' },
+    update: {},
+    create: {
+      id: 'aaaaaaaa-0001-0000-0000-000000000003',
+      agencyId: agency.id,
+      name: 'Tron Sistemas',
+      email: 'marketing@tronsistemas.com.br',
+      website: 'https://tronsistemas.com.br',
+      logoUrl: 'https://placehold.co/200x60/6366F1/FFFFFF?text=Tron',
+      isActive: true,
+    },
+  });
+
+  await (prisma as any).clientMetaConfig.upsert({
+    where: { clientId: tronClient.id },
+    update: {
+      products: TRON_TEMPLATE.products as any,
+      states: TRON_TEMPLATE.states as any,
+      stateBudgetByProduct: TRON_TEMPLATE.stateBudgetByProduct as any,
+      thresholds: TRON_TEMPLATE.thresholds as any,
+      reachFactor: TRON_TEMPLATE.reachFactor,
+      secondaryAccountColor: TRON_TEMPLATE.secondaryAccountColor,
+      sparklineDays: TRON_TEMPLATE.sparklineDays,
+    },
+    create: {
+      clientId: tronClient.id,
+      products: TRON_TEMPLATE.products as any,
+      states: TRON_TEMPLATE.states as any,
+      stateBudgetByProduct: TRON_TEMPLATE.stateBudgetByProduct as any,
+      thresholds: TRON_TEMPLATE.thresholds as any,
+      reachFactor: TRON_TEMPLATE.reachFactor,
+      secondaryAccountColor: TRON_TEMPLATE.secondaryAccountColor,
+      sparklineDays: TRON_TEMPLATE.sparklineDays,
+    },
+  });
+
+  console.log(`✅ Cliente Tron Sistemas + meta-config aplicada (${TRON_TEMPLATE.products.length} produtos, ${TRON_TEMPLATE.states.length} UFs)`);
+
+  // ─────────────────────────────────────────────────────
   // 4. Usuário CLIENT_VIEWER vinculado ao client1
   // ─────────────────────────────────────────────────────
   const clientViewer = await prisma.user.upsert({
@@ -208,12 +251,19 @@ async function main() {
   // ─────────────────────────────────────────────────────
   // Resumo
   // ─────────────────────────────────────────────────────
+  const baseDomain = process.env.TRAX_BASE_DOMAIN ?? 'localhost';
+  const webPort = process.env.TRAX_WEB_PORT ?? '3001';
+  const webProto = baseDomain === 'localhost' ? 'http' : 'https';
+  const webPortSuffix = baseDomain === 'localhost' ? `:${webPort}` : '';
+  const agencyUrl = `${webProto}://agenciademo.${baseDomain}${webPortSuffix}`;
+  const adminUrl = `${webProto}://admin.${baseDomain}${webPortSuffix}`;
+
   console.log('\n══════════════════════════════════════════════════');
   console.log('🚀 Seed concluído com sucesso!');
   console.log('══════════════════════════════════════════════════');
   console.log(`\n📡 Portal da agência demo:`);
-  console.log(`   URL base: http://agenciademo.localhost:3000`);
-  console.log(`   Header alternativo: X-Agency-Domain: agenciademo.trax.app`);
+  console.log(`   URL base: ${agencyUrl}`);
+  console.log(`   Header alternativo: X-Agency-Domain: agenciademo.${baseDomain}`);
   console.log(`\n👤 Credenciais:`);
   console.log(`   AGENCY_ADMIN  → admin@agenciademo.com / admin123!`);
   console.log(`   AGENCY_VIEWER → viewer@agenciademo.com / viewer123!`);
@@ -223,7 +273,7 @@ async function main() {
   console.log(`\n🔐 Super-Admin:`);
   console.log(`   Email: super@traxsolucoes.com.br`);
   console.log(`   Senha: Tr@x2026!SuperAdmin`);
-  console.log(`   URL:   https://admin.traxsolucoes.com.br\n`);
+  console.log(`   URL:   ${adminUrl}\n`);
 }
 
 main()

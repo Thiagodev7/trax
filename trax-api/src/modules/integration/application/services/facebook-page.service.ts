@@ -26,9 +26,10 @@ export class FacebookPageService {
       name: string;
       fan_count: number;
       followers_count: number;
+      talking_about_count?: number;
       category: string;
     }>(`${creds.pageId}`, {
-      fields: 'id,name,fan_count,followers_count,category',
+      fields: 'id,name,fan_count,followers_count,talking_about_count,category',
       access_token: creds.accessToken,
     });
     return {
@@ -36,6 +37,7 @@ export class FacebookPageService {
       name: data.name,
       fanCount: data.fan_count,
       followersCount: data.followers_count,
+      talkingAboutCount: data.talking_about_count ?? 0,
       category: data.category,
     };
   }

@@ -18,6 +18,8 @@ import { EmailModule } from './modules/email/email.module';
 import { UserModule } from './modules/user/user.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { SchedulingModule } from './modules/scheduling/scheduling.module';
+import { MetaConfigModule } from './modules/client/meta-config/meta-config.module';
 import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
@@ -57,6 +59,8 @@ import { join } from 'path';
     UserModule,
     SuperAdminModule,
     AuditLogModule,
+    SchedulingModule,
+    MetaConfigModule,
 
     // --- Servir arquivos estáticos (Uploads) ---
     ServeStaticModule.forRoot({

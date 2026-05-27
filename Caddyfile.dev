@@ -1,0 +1,11 @@
+# Caddy — proxy local opcional (porta 80)
+# Requer API e Web rodando na máquina: npm run dev
+# Subir proxy: npm run dev:proxy
+
+localhost, admin.localhost, *.localhost {
+    reverse_proxy host.docker.internal:3001
+}
+
+api.localhost {
+    reverse_proxy host.docker.internal:3000
+}

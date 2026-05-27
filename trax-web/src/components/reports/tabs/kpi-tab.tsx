@@ -4,13 +4,27 @@ import { useEffect, useState, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { DollarSign, TrendingUp, Users, Target, AlertCircle, RefreshCw } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
+import { useSharedApiClient } from '@/lib/shared-api-client'
+import { reportMetricsPath } from '@/lib/report-metrics-path'
 
 interface CrmMetrics {
   pipeline: {
+    totalContatos?: number
+    oportunidadesAbertas?: number
+    oportunidadesGanhas?: number
+    oportunidadesPerdidas?: number
+    contatos?: number
+    qualificacao?: number
+    vendida?: number
+    perdidas?: number
+  } | null
+  pipelineLegacy?: {
     totalContatos: number
     oportunidadesAbertas: number
     oportunidadesGanhas: number
     oportunidadesPerdidas: number
+    contatos?: number
+    vendida?: number
   } | null
   vendas: number
   receita: number
@@ -24,6 +38,7 @@ interface CrmMetrics {
 interface Props {
   reportId: string
   metaSpend?: number
+  shareToken?: string
 }
 
 function KpiCard({
@@ -49,8 +64,10 @@ function fmtCurrency(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 }
 
-export function KpiTab({ reportId, metaSpend }: Props) {
-  const api = useApiClient()
+export function KpiTab({ reportId, metaSpend, shareToken }: Props) {
+  const authApi = useApiClient()
+  const sharedApi = useSharedApiClient()
+  const api = shareToken ? sharedApi : authApi
   const [metrics, setMetrics] = useState<CrmMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,14 +76,14 @@ export function KpiTab({ reportId, metaSpend }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const data = await api.get<CrmMetrics>(`/reports/${reportId}/metrics/crm`)
+      const data = await api.get<CrmMetrics>(reportMetricsPath(reportId, 'crm', shareToken))
       setMetrics(data)
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar KPIs')
     } finally {
       setLoading(false)
     }
-  }, [reportId])
+  }, [api, reportId, shareToken])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -83,7 +100,7 @@ export function KpiTab({ reportId, metaSpend }: Props) {
     )
   }
 
-  if (error || !metrics?.pipeline) {
+  if (error || (!metrics?.pipeline && !metrics?.pipelineLegacy)) {
     return (
       <div className="card p-10 border-[var(--color-border)] text-center">
         <AlertCircle className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
@@ -98,9 +115,21 @@ export function KpiTab({ reportId, metaSpend }: Props) {
     )
   }
 
-  const { pipeline, vendas, receita, ticketMedio, mrr, historico, funil } = metrics
+  const pipeline = metrics.pipeline ?? metrics.pipelineLegacy
+  if (!pipeline) {
+    return (
+      <div className="card p-10 border-[var(--color-border)] text-center">
+        <AlertCircle className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
+        <p className="font-medium text-[var(--color-foreground)]">Dados de CRM não disponíveis</p>
+      </div>
+    )
+  }
 
-  const cac = metaSpend && vendas > 0 ? metaSpend / vendas : 0
+  const { vendas, receita, ticketMedio, mrr, historico, funil } = metrics
+
+  const totalContatos = pipeline.totalContatos ?? pipeline.contatos ?? 0
+  const vendasCount = vendas ?? pipeline.oportunidadesGanhas ?? pipeline.vendida ?? 0
+  const cac = metaSpend && vendasCount > 0 ? metaSpend / vendasCount : 0
   const roas = metaSpend && metaSpend > 0 ? receita / metaSpend : 0
   const ltv72 = ticketMedio * 72
 
@@ -108,8 +137,8 @@ export function KpiTab({ reportId, metaSpend }: Props) {
     <div className="space-y-6">
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Contatos (Mês)" value={String(pipeline?.totalContatos ?? 0)} icon={Users} />
-        <KpiCard label="Vendas Fechadas" value={String(vendas)} icon={Target} color="text-emerald-400" />
+        <KpiCard label="Contatos (Mês)" value={String(totalContatos)} icon={Users} />
+        <KpiCard label="Vendas Fechadas" value={String(vendasCount)} icon={Target} color="text-emerald-400" />
         <KpiCard label="Receita Total" value={fmtCurrency(receita)} icon={DollarSign} color="text-emerald-400" />
         <KpiCard label="MRR" value={fmtCurrency(mrr)} icon={TrendingUp} />
         <KpiCard label="Ticket Médio" value={fmtCurrency(ticketMedio)} icon={DollarSign} />

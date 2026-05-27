@@ -230,15 +230,20 @@ export class MetaAdsService {
       url = json.paging?.next ?? null;
     }
 
-    return result.map((row) => ({
-      ad_id: row.ad_id,
-      ad_name: row.ad_name,
-      spend: parseFloat(row.spend || '0'),
-      impressions: Number(row.impressions || 0),
-      clicks: Number(row.clicks || 0),
-      leads: extractLeads(row.actions),
-      thumbnailUrl: row.thumbnail_url,
-    }));
+    return result.map((row) => {
+      const spend = parseFloat(row.spend || '0');
+      const leads = extractLeads(row.actions);
+      return {
+        ad_id: row.ad_id,
+        ad_name: row.ad_name,
+        spend,
+        impressions: Number(row.impressions || 0),
+        clicks: Number(row.clicks || 0),
+        leads,
+        cpl: leads > 0 ? spend / leads : null,
+        thumbnailUrl: row.thumbnail_url,
+      };
+    });
   }
 
   /** Validate credentials by fetching basic account info */

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getRootDomains } from '@/lib/domains'
 
-const ROOT_DOMAINS = ['traxsolucoes.com.br', 'traxsolucoes.com']
 const ALWAYS_ALLOWED = ['admin', 'api', 'www']
 
 /**
@@ -10,38 +10,32 @@ const ALWAYS_ALLOWED = ['admin', 'api', 'www']
  */
 export async function GET(req: NextRequest) {
   const domain = req.nextUrl.searchParams.get('domain') ?? ''
+  const rootDomains = getRootDomains().filter((root) => root !== 'localhost' && root !== '127.0.0.1')
 
-  // Valida que é um subdomínio dos nossos domínios raiz
-  const rootDomain = ROOT_DOMAINS.find((root) => domain.endsWith(`.${root}`))
+  const rootDomain = rootDomains.find((root) => domain.endsWith(`.${root}`))
   if (!rootDomain) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
   const subdomain = domain.slice(0, domain.length - rootDomain.length - 1)
 
-  // Subdomínios sem ponto (nível único) e válidos
   if (!subdomain || subdomain.includes('.')) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
-  // Subdomínios fixos sempre permitidos
   if (ALWAYS_ALLOWED.includes(subdomain)) {
     return new NextResponse('OK', { status: 200 })
   }
 
-  // Para slugs de agências: valida via API se o slug existe
   try {
     const apiUrl = process.env.API_URL ?? 'http://api:3000'
     const res = await fetch(`${apiUrl}/api/v1/onboarding/check-slug?slug=${encodeURIComponent(subdomain)}`, {
       cache: 'no-store',
     })
 
-    // check-slug retorna { available: true } se o slug NÃO existe
-    // Precisamos do oposto: slug que JÁ existe = agência válida = emitir cert
     if (res.ok) {
       const data = await res.json()
       if (data.available === false) {
-        // Slug está em uso = agência existe = emitir certificado
         return new NextResponse('OK', { status: 200 })
       }
     }

@@ -28,9 +28,17 @@ async function bootstrap() {
   const tenantOriginPattern =
     /^https:\/\/([a-z0-9-]+\.)*traxsolucoes\.com(\.br)?$/;
 
+  const localhostOriginPattern =
+    /^http:\/\/([a-z0-9-]+\.)*localhost(:\d+)?$/;
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || tenantOriginPattern.test(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        tenantOriginPattern.test(origin) ||
+        localhostOriginPattern.test(origin)
+      ) {
         callback(null, true);
         return;
       }

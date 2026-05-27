@@ -10,7 +10,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { getPublicApiV1Base } from '@/lib/api-base-url'
 
 interface RequestOptions {
@@ -72,12 +72,15 @@ export function useApiClient() {
     [accessToken, update],
   )
 
-  return {
-    get: <T>(path: string, headers?: Record<string, string>) =>
-      request<T>(path, { method: 'GET', headers }),
-    post: <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body }),
-    patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
-    put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
-    delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-  }
+  return useMemo(
+    () => ({
+      get: <T>(path: string, headers?: Record<string, string>) =>
+        request<T>(path, { method: 'GET', headers }),
+      post: <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body }),
+      patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
+      put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
+      delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+    }),
+    [request],
+  )
 }

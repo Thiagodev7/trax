@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -10,6 +10,8 @@ import {
   Copy, ExternalLink, Pencil, BarChart3
 } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
+import { useSharedApiClient } from '@/lib/shared-api-client'
+import { reportMetricsPath } from '@/lib/report-metrics-path'
 import { toast } from 'sonner'
 import { MetaAdsTab } from './tabs/meta-ads-tab'
 import { OrganicTab } from './tabs/organic-tab'
@@ -57,21 +59,46 @@ interface Report {
   }>
 }
 
-export function ReportViewer({ report }: { report: Report }) {
+const EMPTY_TABS: TabKey[] = []
+
+export function ReportViewer({ report, shareToken }: { report: Report; shareToken?: string }) {
+  const isPublic = !!shareToken
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
-  const api = useApiClient()
+  const authApi = useApiClient()
+  const sharedApi = useSharedApiClient()
+  const api = shareToken ? sharedApi : authApi
 
   const moduleConfig = report.moduleConfig
-  const enabledTabs: TabKey[] = moduleConfig?.enabledTabs?.length
-    ? moduleConfig.enabledTabs
-    : []
+  const enabledTabs = useMemo<TabKey[]>(
+    () => (moduleConfig?.enabledTabs?.length ? moduleConfig.enabledTabs : EMPTY_TABS),
+    [moduleConfig?.enabledTabs],
+  )
 
   const defaultTab = moduleConfig?.defaultTab ?? enabledTabs[0] ?? null
   const [activeTab, setActiveTab] = useState<TabKey | null>(defaultTab)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [metaSpend, setMetaSpend] = useState<number | undefined>(undefined)
 
   const periodStart = report.periodStart?.split('T')[0]
   const periodEnd = report.periodEnd?.split('T')[0]
+
+  const fetchMetaSpend = useCallback(async () => {
+    if (!enabledTabs.includes('KPI') && !enabledTabs.includes('META_ADS')) return
+    try {
+      const params = new URLSearchParams()
+      if (periodStart) params.set('startDate', periodStart)
+      if (periodEnd) params.set('endDate', periodEnd)
+      const data = await api.get<{ summary: { totalSpend: number } | null }>(
+        `${reportMetricsPath(report.id, 'meta-ads', shareToken)}?${params}`,
+      )
+      setMetaSpend(data.summary?.totalSpend)
+    } catch {
+      setMetaSpend(undefined)
+    }
+  }, [api, report.id, shareToken, periodStart, periodEnd, enabledTabs])
+
+  useEffect(() => { fetchMetaSpend() }, [fetchMetaSpend])
 
   async function handlePublish() {
     try {
@@ -94,15 +121,21 @@ export function ReportViewer({ report }: { report: Report }) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Report header */}
       <div className="flex items-start gap-4">
-        <Link
-          href="/reports"
-          className="p-2 -ml-2 rounded-lg text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] transition-colors shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
+        {!isPublic && (
+          <Link
+            href="/reports"
+            className="p-2 -ml-2 rounded-lg text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] transition-colors shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
+              {isPublic && report.client.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={report.client.logoUrl} alt={report.client.name} className="h-10 w-auto rounded border border-[var(--color-border)] mb-3" />
+              )}
               <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight leading-tight">
                 {report.title}
               </h2>
@@ -128,7 +161,7 @@ export function ReportViewer({ report }: { report: Report }) {
                   }`}
                 >
                   {report.status === 'PUBLISHED' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                  {report.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho'}
+                  {report.status === 'PUBLISHED' ? (isPublic ? 'Relatório compartilhado' : 'Publicado') : 'Rascunho'}
                 </span>
               </div>
               {report.description && (
@@ -137,6 +170,7 @@ export function ReportViewer({ report }: { report: Report }) {
             </div>
 
             {/* Actions */}
+            {!isPublic && (
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <Link
                 href={`/reports/${report.id}/edit`}
@@ -176,12 +210,23 @@ export function ReportViewer({ report }: { report: Report }) {
                 </>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* No tabs configured */}
-      {enabledTabs.length === 0 && (
+      {enabledTabs.length === 0 && isPublic && (
+        <div className="card p-12 border-[var(--color-border)] text-center">
+          <BarChart3 className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
+          <p className="font-medium text-[var(--color-foreground)]">Relatório sem módulos configurados</p>
+          <p className="text-sm text-[var(--color-muted-foreground)] mt-1">
+            Este relatório ainda não possui tabs habilitadas no editor.
+          </p>
+        </div>
+      )}
+
+      {enabledTabs.length === 0 && !isPublic && (
         <div className="card p-12 border-[var(--color-border)] border-dashed text-center">
           <BarChart3 className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
           <p className="font-medium text-[var(--color-foreground)]">Nenhuma tab configurada</p>
@@ -226,18 +271,28 @@ export function ReportViewer({ report }: { report: Report }) {
           {/* Tab content */}
           <div>
             {activeTab === 'META_ADS' && (
-              <MetaAdsTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} />
+              <MetaAdsTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} shareToken={shareToken} />
             )}
             {activeTab === 'ORGANIC' && (
-              <OrganicTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} />
+              <OrganicTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} selectedDate={selectedDate} shareToken={shareToken} />
             )}
             {activeTab === 'CALENDAR' && (
-              <CalendarTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} />
+              <CalendarTab
+                reportId={report.id}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                selectedDate={selectedDate}
+                onSelectDate={(d) => { setSelectedDate(d); if (d) setActiveTab('ORGANIC') }}
+                clientId={isPublic ? undefined : report.client.id}
+                shareToken={shareToken}
+              />
             )}
             {activeTab === 'KPI' && (
-              <KpiTab reportId={report.id} />
+              <KpiTab reportId={report.id} metaSpend={metaSpend} shareToken={shareToken} />
             )}
-            {activeTab === 'GOOGLE_ADS' && <GoogleAdsTab />}
+            {activeTab === 'GOOGLE_ADS' && (
+              <GoogleAdsTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} shareToken={shareToken} />
+            )}
             {activeTab === 'LINKEDIN_ADS' && <LinkedInAdsTab />}
           </div>
         </>

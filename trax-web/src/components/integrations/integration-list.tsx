@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { GoogleAdsOAuthHandler } from './google-ads-oauth-handler'
 import {
   RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle,
   Trash2, Pencil, Plug, Zap
@@ -154,6 +155,9 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
 
   return (
     <div className="space-y-4">
+      <Suspense fallback={null}>
+        <GoogleAdsOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
+      </Suspense>
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--color-muted-foreground)]">
           {integrations.length} integração{integrations.length !== 1 ? 'ões' : ''} configurada{integrations.length !== 1 ? 's' : ''}

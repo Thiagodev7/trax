@@ -46,7 +46,7 @@ export default async function ClientIntegrationsPage({
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {client.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -66,12 +66,19 @@ export default async function ClientIntegrationsPage({
             Gerencie as conexões com plataformas de marketing para sincronizar dados automaticamente.
           </p>
         </div>
+        <Link
+          href={`/clients/${id}/meta-config`}
+          className="text-sm px-3 py-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-2)] inline-flex items-center gap-2 self-start"
+        >
+          Configurar Meta Ads
+        </Link>
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: 'Meta Ads', desc: 'Campanhas, conjuntos, criativos, leads e gastos diários', icon: '📊' },
+          { title: 'Google Ads', desc: 'Gastos, conversões, CPC, impression share e quality score', icon: '🎯' },
           { title: 'Instagram / Facebook', desc: 'Seguidores, alcance, engajamento e histórico de posts', icon: '📸' },
           { title: 'Nectar CRM', desc: 'Pipeline, vendas fechadas, receita e histórico mensal', icon: '🌿' },
         ].map((item) => (

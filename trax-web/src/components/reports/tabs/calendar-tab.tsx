@@ -1,8 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Heart, MessageCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Heart, MessageCircle, BookOpen } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
+import { useSharedApiClient } from '@/lib/shared-api-client'
+import { reportMetricsPath } from '@/lib/report-metrics-path'
+import { DEFAULT_EDITORIAL_SCRIPTS } from '@/lib/editorial-scripts'
+import { PRODUCT_COLORS, PRODUCT_LABELS } from '@/lib/meta-heuristics'
+import { SchedulePostsPanel } from '@/components/reports/schedule-posts-panel'
 
 interface Post {
   id: string | null
@@ -14,16 +19,22 @@ interface Post {
   likeCount: unknown
   commentsCount: unknown
   mediaType: string
+  productTag?: string | null
 }
 
 interface CalendarData {
   posts: Post[]
+  editorialScripts?: unknown[] | null
 }
 
 interface Props {
   reportId: string
   periodStart?: string
   periodEnd?: string
+  selectedDate?: string | null
+  onSelectDate?: (date: string | null) => void
+  clientId?: string
+  shareToken?: string
 }
 
 const DAYS_OF_WEEK = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -37,11 +48,15 @@ const PLATFORM_COLORS: Record<string, string> = {
   facebook: 'bg-blue-500/20 border-blue-500/40 text-blue-400',
 }
 
-export function CalendarTab({ reportId, periodStart, periodEnd }: Props) {
-  const api = useApiClient()
+export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, clientId, shareToken }: Props) {
+  const authApi = useApiClient()
+  const sharedApi = useSharedApiClient()
+  const api = shareToken ? sharedApi : authApi
   const [data, setData] = useState<CalendarData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editorialPage, setEditorialPage] = useState(0)
+  const editorialPerPage = 4
 
   const now = new Date()
   const [viewYear, setViewYear] = useState(periodEnd ? new Date(periodEnd).getFullYear() : now.getFullYear())
@@ -55,14 +70,14 @@ export function CalendarTab({ reportId, periodStart, periodEnd }: Props) {
       const params = new URLSearchParams()
       if (periodStart) params.set('startDate', periodStart)
       if (periodEnd) params.set('endDate', periodEnd)
-      const result = await api.get<CalendarData>(`/reports/${reportId}/metrics/calendar?${params}`)
+      const result = await api.get<CalendarData>(`${reportMetricsPath(reportId, 'calendar', shareToken)}?${params}`)
       setData(result)
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar calendário')
     } finally {
       setLoading(false)
     }
-  }, [reportId, periodStart, periodEnd])
+  }, [api, reportId, shareToken, periodStart, periodEnd])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -118,8 +133,13 @@ export function CalendarTab({ reportId, periodStart, periodEnd }: Props) {
     return d.getFullYear() === viewYear && d.getMonth() === viewMonth
   }).length
 
+  const editorialScripts = (data?.editorialScripts as typeof DEFAULT_EDITORIAL_SCRIPTS | null) ?? DEFAULT_EDITORIAL_SCRIPTS
+  const editorialSlice = editorialScripts.slice(editorialPage * editorialPerPage, (editorialPage + 1) * editorialPerPage)
+  const editorialPages = Math.ceil(editorialScripts.length / editorialPerPage)
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -158,23 +178,33 @@ export function CalendarTab({ reportId, periodStart, periodEnd }: Props) {
         {cells.map((cell, i) => {
           if (!cell) return <div key={i} className="h-24 rounded-lg" />
           const isToday = cell.dateStr === new Date().toISOString().split('T')[0]
+          const isSelected = cell.dateStr === selectedDate
+          const productColor = cell.posts[0]?.productTag ? PRODUCT_COLORS[cell.posts[0].productTag] : undefined
           return (
             <div
+              role="button"
+              tabIndex={0}
               key={cell.dateStr}
-              className={`h-24 rounded-lg border p-1.5 flex flex-col gap-0.5 overflow-hidden ${
-                isToday
-                  ? 'border-[var(--color-primary)]/60 bg-[var(--color-primary)]/5'
-                  : 'border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-border)]'
+              onClick={() => onSelectDate?.(isSelected ? null : cell.dateStr)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectDate?.(isSelected ? null : cell.dateStr) }}
+              className={`h-24 rounded-lg border p-1.5 flex flex-col gap-0.5 overflow-hidden text-left w-full cursor-pointer ${
+                isSelected
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                  : isToday
+                    ? 'border-[var(--color-primary)]/60 bg-[var(--color-primary)]/5'
+                    : 'border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/30'
               }`}
+              style={productColor && !isSelected ? { borderColor: `${productColor}66` } : undefined}
             >
               <span className={`text-xs font-medium mb-0.5 ${isToday ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}`}>
                 {cell.dayNum}
               </span>
               {cell.posts.slice(0, 3).map((post, pi) => (
                 <button
+                  type="button"
                   key={pi}
-                  onClick={() => setSelectedPost(post)}
-                  className={`text-left w-full px-1 py-0.5 rounded text-xs border truncate transition-opacity hover:opacity-80 ${PLATFORM_COLORS[post.platform]}`}
+                  onClick={(e) => { e.stopPropagation(); setSelectedPost(post) }}
+                  className={`block w-full px-1 py-0.5 rounded text-xs border truncate text-left hover:opacity-80 ${PLATFORM_COLORS[post.platform]}`}
                 >
                   {post.platform === 'instagram' ? '📸' : '📘'} {String(post.caption ?? '').slice(0, 10)}…
                 </button>
@@ -185,6 +215,30 @@ export function CalendarTab({ reportId, periodStart, periodEnd }: Props) {
             </div>
           )
         })}
+      </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="card p-4 border-[var(--color-border)]">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><BookOpen className="w-4 h-4" /> Roteiros editoriais</h3>
+          <div className="space-y-3">
+            {editorialSlice.map((r, i) => (
+              <div key={i} className="rounded-lg border border-[var(--color-border)] p-3" style={{ borderLeftColor: r.color, borderLeftWidth: 3 }}>
+                <p className="text-[10px] uppercase text-[var(--color-muted-foreground)]">{r.format} · {r.produto}</p>
+                <p className="text-sm font-semibold mt-1">{r.title}</p>
+                <p className="text-xs text-[var(--color-muted-foreground)] mt-1 italic">&ldquo;{r.hook}&rdquo;</p>
+              </div>
+            ))}
+          </div>
+          {editorialPages > 1 && (
+            <div className="flex justify-between mt-3">
+              <button disabled={editorialPage === 0} onClick={() => setEditorialPage((p) => p - 1)} className="text-xs px-2 py-1 border rounded disabled:opacity-40">←</button>
+              <span className="text-xs">{editorialPage + 1}/{editorialPages}</span>
+              <button disabled={editorialPage >= editorialPages - 1} onClick={() => setEditorialPage((p) => p + 1)} className="text-xs px-2 py-1 border rounded disabled:opacity-40">→</button>
+            </div>
+          )}
+        </div>
+        {clientId && <SchedulePostsPanel clientId={clientId} />}
       </div>
 
       {/* Post detail modal */}

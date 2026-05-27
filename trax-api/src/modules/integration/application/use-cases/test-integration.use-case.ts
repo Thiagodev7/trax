@@ -3,6 +3,7 @@ import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { decryptCredentials } from '../crypto.helper';
 import { MetaAdsService } from '../services/meta-ads.service';
+import { GoogleAdsService } from '../services/google-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
@@ -13,6 +14,7 @@ export class TestIntegrationUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly metaAds: MetaAdsService,
+    private readonly googleAds: GoogleAdsService,
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
@@ -32,6 +34,9 @@ export class TestIntegrationUseCase {
       switch (integration.provider) {
         case 'META_ADS':
           result = await this.metaAds.testConnection(creds as any);
+          break;
+        case 'GOOGLE_ADS':
+          result = await this.googleAds.testConnection(creds as any);
           break;
         case 'INSTAGRAM':
           result = await this.instagram.testConnection(creds as any);

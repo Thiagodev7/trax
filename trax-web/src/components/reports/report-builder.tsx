@@ -55,7 +55,7 @@ const TAB_CONFIGS: TabConfig[] = [
     key: 'GOOGLE_ADS',
     label: 'Google Ads',
     icon: BarChart3,
-    description: 'Em breve — campanhas do Google Ads',
+    description: 'Campanhas, gastos, conversões, CPC e impression share',
     requiresProvider: ['GOOGLE_ADS'],
   },
   {

@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3001',
+        '127.0.0.1:3001',
+        'admin.localhost:3001',
+        '*.localhost:3001',
         'traxsolucoes.com.br',
         'www.traxsolucoes.com.br',
         'admin.traxsolucoes.com.br',

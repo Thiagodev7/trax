@@ -13,7 +13,7 @@ interface GuideDef {
   links?: { label: string; url: string }[]
 }
 
-const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[]; guide?: GuideDef }> = [
+const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[]; guide?: GuideDef; oauth?: boolean }> = [
   {
     value: 'META_ADS',
     label: 'Meta Ads',
@@ -105,23 +105,20 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
     value: 'GOOGLE_ADS',
     label: 'Google Ads',
     icon: '🎯',
-    fields: [
-      { key: 'refreshToken', label: 'Refresh Token', placeholder: '1//...', type: 'password' },
-      { key: 'customerId', label: 'Customer ID', placeholder: '123-456-7890', type: 'text' },
-      { key: 'developerToken', label: 'Developer Token', placeholder: '...', type: 'password' },
-    ],
+    fields: [],
+    oauth: true,
     guide: {
-      title: 'Como obter credenciais do Google Ads',
+      title: 'Conectar Google Ads',
       steps: [
-        'O "Customer ID" (ID do Cliente) é o número de 10 dígitos (ex: 123-456-7890) encontrado no canto superior direito do seu painel do Google Ads.',
-        'O "Developer Token" é obtido na sua Conta de Administrador (MCC) do Google Ads, na seção "Minha Central de API".',
-        'Para obter o "Refresh Token", crie um projeto no Google Cloud, ative a Google Ads API, crie credenciais OAuth 2.0 e utilize o OAuth 2.0 Playground do Google para gerar o token de atualização.'
+        'Clique em "Conectar com Google" para autorizar o acesso à sua conta de anúncios.',
+        'Após o login, escolha a conta Google Ads (Customer ID) que deseja vincular a este cliente.',
+        'O Developer Token e credenciais OAuth ficam configurados no servidor Trax (variáveis de ambiente).',
       ],
       links: [
         { label: 'Google Cloud Console', url: 'https://console.cloud.google.com/' },
-        { label: 'OAuth 2.0 Playground', url: 'https://developers.google.com/oauthplayground/' }
-      ]
-    }
+        { label: 'Central de API Google Ads', url: 'https://ads.google.com/aw/apicenter' },
+      ],
+    },
   },
 ]
 
@@ -132,6 +129,8 @@ interface FieldDef {
   type: 'text' | 'password'
 }
 
+type ProviderDef = (typeof PROVIDERS)[number]
+
 interface Props {
   clientId: string
   onAdded: (integration: Integration) => void
@@ -139,14 +138,32 @@ interface Props {
 
 export function AddIntegrationDialog({ clientId, onAdded }: Props) {
   const [open, setOpen] = useState(false)
-  const [selectedProvider, setSelectedProvider] = useState<typeof PROVIDERS[0] | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<ProviderDef | null>(null)
+  const [connectingOAuth, setConnectingOAuth] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [externalAccount, setExternalAccount] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const api = useApiClient()
 
-  function handleProviderSelect(p: typeof PROVIDERS[0]) {
+  async function handleGoogleConnect() {
+    setConnectingOAuth(true)
+    try {
+      const returnUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/clients/${clientId}/integrations`
+        : undefined
+      const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+      const { url } = await api.get<{ url: string }>(
+        `/clients/${clientId}/integrations/google-ads/connect${params}`,
+      )
+      window.location.href = url
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao iniciar OAuth')
+      setConnectingOAuth(false)
+    }
+  }
+
+  function handleProviderSelect(p: ProviderDef) {
     setSelectedProvider(p)
     setFields({})
     setDisplayName('')
@@ -164,6 +181,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedProvider) return
+    if (selectedProvider.oauth) return
     setLoading(true)
     try {
       const credentials: Record<string, string> = {}
@@ -278,7 +296,24 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
                   />
                 </div>
 
-                {selectedProvider.fields.map((field) => (
+                {selectedProvider.oauth ? (
+                  <div className="py-4">
+                    <button
+                      type="button"
+                      onClick={handleGoogleConnect}
+                      disabled={connectingOAuth}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium bg-white text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-60"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                      </svg>
+                      {connectingOAuth ? 'Redirecionando…' : 'Conectar com Google'}
+                    </button>
+                  </div>
+                ) : selectedProvider.fields.map((field) => (
                   <div key={field.key}>
                     <label className="block text-xs font-medium text-[var(--color-muted-foreground)] mb-1.5 uppercase tracking-wide">
                       {field.label}
@@ -316,13 +351,15 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
                       Cancelar
                     </button>
                   </Dialog.Close>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm font-medium bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg hover:opacity-90 transition-all disabled:opacity-60"
-                  >
-                    {loading ? 'Salvando…' : 'Salvar Integração'}
-                  </button>
+                  {!selectedProvider.oauth && (
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 px-4 py-2 text-sm font-medium bg-[var(--color-primary)] text-[var(--color-primary-foreground)] rounded-lg hover:opacity-90 transition-all disabled:opacity-60"
+                    >
+                      {loading ? 'Salvando…' : 'Salvar Integração'}
+                    </button>
+                  )}
                 </div>
               </form>
             )}

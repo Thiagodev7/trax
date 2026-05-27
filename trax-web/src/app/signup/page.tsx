@@ -14,8 +14,9 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getPublicApiV1Base } from '@/lib/api-base-url'
+import { getBaseDomain } from '@/lib/domains'
 
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'traxsolucoes.com.br'
+const BASE_DOMAIN = getBaseDomain()
 
 // ─── Schemas per step ────────────────────────────────────────────────────────
 const step1Schema = z.object({

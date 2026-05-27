@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Users, Eye, Heart, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
+import { useSharedApiClient } from '@/lib/shared-api-client'
+import { reportMetricsPath } from '@/lib/report-metrics-path'
 
 interface OrganicMetrics {
   instagram: PlatformData
@@ -14,6 +16,8 @@ interface PlatformData {
   profile: Profile | null
   insights: Insight[]
   posts: Post[]
+  kpis?: Record<string, number> | null
+  insightsAuto?: string[]
 }
 
 interface Profile {
@@ -52,6 +56,8 @@ interface Props {
   reportId: string
   periodStart?: string
   periodEnd?: string
+  selectedDate?: string | null
+  shareToken?: string
 }
 
 function ProfileCard({ profile, platform }: { profile: Profile; platform: 'instagram' | 'facebook' }) {
@@ -105,21 +111,31 @@ function PostCard({ post }: { post: Post }) {
   )
 }
 
-export function OrganicTab({ reportId, periodStart, periodEnd }: Props) {
-  const api = useApiClient()
+export function OrganicTab({ reportId, periodStart, periodEnd, selectedDate, shareToken }: Props) {
+  const authApi = useApiClient()
+  const sharedApi = useSharedApiClient()
+  const api = shareToken ? sharedApi : authApi
   const [metrics, setMetrics] = useState<OrganicMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activePlatform, setActivePlatform] = useState<'instagram' | 'facebook'>('instagram')
+  const [page, setPage] = useState(0)
+  const perPage = 5
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams()
-      if (periodStart) params.set('startDate', periodStart)
-      if (periodEnd) params.set('endDate', periodEnd)
-      const data = await api.get<OrganicMetrics>(`/reports/${reportId}/metrics/organic?${params}`)
+      if (selectedDate) {
+        params.set('selectedDate', selectedDate)
+        params.set('startDate', selectedDate)
+        params.set('endDate', selectedDate)
+      } else {
+        if (periodStart) params.set('startDate', periodStart)
+        if (periodEnd) params.set('endDate', periodEnd)
+      }
+      const data = await api.get<OrganicMetrics>(`${reportMetricsPath(reportId, 'organic', shareToken)}?${params}`)
       setMetrics(data)
       // Auto-select available platform
       if (data.facebook.profile && !data.instagram.profile) setActivePlatform('facebook')
@@ -128,7 +144,7 @@ export function OrganicTab({ reportId, periodStart, periodEnd }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [reportId, periodStart, periodEnd])
+  }, [api, reportId, shareToken, periodStart, periodEnd, selectedDate])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -177,8 +193,21 @@ export function OrganicTab({ reportId, periodStart, periodEnd }: Props) {
     impressoes: ins.impressions ?? ins.page_impressions ?? 0,
   }))
 
+  const engagementChart = (platform?.posts ?? []).map((p) => ({
+    date: p.date?.slice(5) ?? '',
+    curtidas: p.likeCount ?? 0,
+    comentarios: p.commentsCount ?? 0,
+  }))
+
+  const kpis = platform?.kpis
+  const pagedPosts = (platform?.posts ?? []).slice(page * perPage, (page + 1) * perPage)
+  const totalPages = Math.ceil((platform?.posts?.length ?? 0) / perPage)
+
   return (
     <div className="space-y-6">
+      {selectedDate && (
+        <p className="text-xs text-[var(--color-primary)]">Filtrando dia: {selectedDate}</p>
+      )}
       {/* Platform sub-tabs */}
       <div className="flex gap-2">
         {hasIG && (
@@ -213,6 +242,35 @@ export function OrganicTab({ reportId, periodStart, periodEnd }: Props) {
         <ProfileCard profile={platform.profile} platform={activePlatform} />
       )}
 
+      {kpis && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {activePlatform === 'instagram' ? (
+            <>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Seguidores</p><p className="text-xl font-bold">{kpis.followers ?? 0}{(kpis.followerGain ?? 0) > 0 && <span className="text-xs text-emerald-500 ml-1">+{kpis.followerGain}</span>}</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Posts no período</p><p className="text-xl font-bold">{kpis.postsCount ?? 0}</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Curtidas</p><p className="text-xl font-bold">{kpis.totalLikes ?? 0}</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Comentários</p><p className="text-xl font-bold">{kpis.totalComments ?? 0}</p></div>
+            </>
+          ) : (
+            <>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Fãs</p><p className="text-xl font-bold">{kpis.fans ?? 0}</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Posts</p><p className="text-xl font-bold">{kpis.postsCount ?? 0}</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Engajamento</p><p className="text-xl font-bold">{(kpis.engagementRate ?? 0).toFixed(1)}%</p></div>
+              <div className="card p-4 border-[var(--color-border)]"><p className="text-xs text-[var(--color-muted-foreground)]">Compartilhamentos</p><p className="text-xl font-bold">{kpis.totalShares ?? 0}</p></div>
+            </>
+          )}
+        </div>
+      )}
+
+      {(platform?.insightsAuto?.length ?? 0) > 0 && (
+        <div className="card p-4 border-[var(--color-border)]">
+          <h3 className="text-sm font-semibold mb-2">Insights</h3>
+          <ul className="text-sm text-[var(--color-muted-foreground)] space-y-1">
+            {platform!.insightsAuto!.map((t, i) => <li key={i}>• {t}</li>)}
+          </ul>
+        </div>
+      )}
+
       {/* Insights chart */}
       {chartData.length > 0 && (
         <div className="card p-6 border-[var(--color-border)]">
@@ -241,10 +299,54 @@ export function OrganicTab({ reportId, periodStart, periodEnd }: Props) {
         </div>
       )}
 
-      {/* Posts grid */}
+      {engagementChart.length > 0 && (
+        <div className="card p-6 border-[var(--color-border)]">
+          <h3 className="text-sm font-semibold mb-4">Engajamento por post</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={engagementChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Legend />
+              <Area type="monotone" dataKey="curtidas" stroke="#E1306C" fill="#E1306C" fillOpacity={0.15} />
+              <Area type="monotone" dataKey="comentarios" stroke="#6366F1" fill="#6366F1" fillOpacity={0.15} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {(platform?.posts?.length ?? 0) > 0 && (
+        <div className="card overflow-hidden border-[var(--color-border)]">
+          <div className="p-4 border-b border-[var(--color-border)]"><h3 className="text-sm font-semibold">Posts</h3></div>
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--color-surface-2)] text-xs uppercase text-[var(--color-muted-foreground)]">
+              <tr><th className="px-4 py-2 text-left">Conteúdo</th><th className="px-4 py-2 text-right">Curtidas</th><th className="px-4 py-2 text-right">Coment.</th><th className="px-4 py-2 text-right">Data</th></tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]">
+              {pagedPosts.map((post, i) => (
+                <tr key={post.id ?? i}>
+                  <td className="px-4 py-2 max-w-xs truncate">{post.caption ?? '—'}</td>
+                  <td className="px-4 py-2 text-right">{post.likeCount ?? 0}</td>
+                  <td className="px-4 py-2 text-right">{post.commentsCount ?? 0}</td>
+                  <td className="px-4 py-2 text-right text-xs">{post.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 p-3">
+              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="px-3 py-1 text-xs border rounded disabled:opacity-40">Anterior</button>
+              <span className="text-xs self-center">{page + 1}/{totalPages}</span>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 text-xs border rounded disabled:opacity-40">Próxima</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {(platform?.posts?.length ?? 0) > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-[var(--color-foreground)] mb-4">Posts Recentes</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-foreground)] mb-4">Galeria</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {platform!.posts.slice(0, 12).map((post, i) => (
               <PostCard key={post.id ?? i} post={post} />

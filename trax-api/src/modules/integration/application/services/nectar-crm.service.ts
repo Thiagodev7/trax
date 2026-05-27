@@ -53,11 +53,22 @@ export class NectarCrmService {
       oportunidadesAbertas: data.oportunidades_abertas ?? 0,
       oportunidadesGanhas: data.oportunidades_ganhas ?? 0,
       oportunidadesPerdidas: data.oportunidades_perdidas ?? 0,
+      qualificacao: data.oportunidades_abertas ?? 0,
+      agendamento: 0,
+      qualificada: 0,
       receitaTotal: data.receita_total ?? 0,
       ticketMedio: data.ticket_medio ?? 0,
       mrr: data.mrr ?? 0,
       historicoMensal: data.historico_mensal ?? [],
       funil: data.funil ?? [],
+      byOrigin: {
+        'Meta Ads': {
+          contatos: data.total_contatos ?? 0,
+          qualificacao: data.oportunidades_abertas ?? 0,
+          vendidas: data.oportunidades_ganhas ?? 0,
+          perdidas: data.oportunidades_perdidas ?? 0,
+        },
+      },
     };
   }
 

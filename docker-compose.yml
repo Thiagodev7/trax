@@ -60,6 +60,19 @@ services:
     networks:
       - trax_network
 
+  caddy-dev:
+    image: caddy:2-alpine
+    container_name: trax_caddy_dev
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    profiles:
+      - proxy
+
 volumes:
   postgres_data:
     driver: local

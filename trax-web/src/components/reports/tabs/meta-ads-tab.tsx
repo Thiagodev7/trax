@@ -1,184 +1,181 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend
-} from 'recharts'
-import {
-  DollarSign, Users, MousePointerClick, Eye, TrendingUp, TrendingDown,
-  RefreshCw, Target, Layers, ImageIcon, AlertCircle
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { useSharedApiClient } from '@/lib/shared-api-client'
+import { toast } from 'sonner'
+import { getPublicApiV1Base } from '@/lib/api-base-url'
+import { useSession } from 'next-auth/react'
 
-interface MetaMetrics {
-  campaigns: Campaign[]
-  adsets: AdsetInfo[]
-  adsetMetrics: AdsetMetric[]
-  creatives: Creative[]
-  dailyData: DailyPoint[]
-  summary: Summary | null
-}
+import { PeriodToolbar, buildPeriod, type PeriodValue } from '../meta/period-toolbar'
+import { FilterToolbar } from '../meta/filter-toolbar'
+import { HeroRow } from '../meta/hero-row'
+import { KpiGrid } from '../meta/kpi-grid'
+import { AnnualSummary } from '../meta/annual-summary'
+import { VerbaProdutoSection } from '../meta/verba-produto'
+import { BudgetPacing } from '../meta/budget-pacing'
+import { ChartsRow } from '../meta/charts-row'
+import { FunnelInsights } from '../meta/funnel-insights'
+import { CrmEmbed } from '../meta/crm-embed'
+import { RioVerdeSection } from '../meta/rio-verde-section'
+import { AdsetTable } from '../meta/adset-table'
+import { CreativesCarousel } from '../meta/creatives-carousel'
+import { AdsetDetailModal } from '../meta/adset-detail-modal'
+import { CreativeDetailModal } from '../meta/creative-detail-modal'
 
-interface Campaign {
-  id: string
-  name: string
-  spend: number
-  leads: number
-  impressions: number
-  clicks: number
-  cpl: number
-  ctr: number
-}
+import type {
+  MetaMetricsResponse,
+  CrmEmbed as CrmEmbedData,
+  AdsetRow,
+  CreativeRow,
+  StatusFilter,
+} from '../meta/types'
 
-interface AdsetInfo {
-  id: string
-  name: string
-  dailyBudget: number
-  status: string
-}
-
-interface AdsetMetric {
-  date: string
-  adset_id: string
-  adset_name: string
-  spend: number
-  leads: number
-  ctr: number
-  cpc: number
-}
-
-interface Creative {
-  ad_id: string
-  ad_name: string
-  spend: number
-  leads: number
-  impressions: number
-  thumbnailUrl?: string
-}
-
-interface DailyPoint {
-  date: string
-  spend: number
-  leads: number
-  impressions: number
-  clicks: number
-}
-
-interface Summary {
-  totalSpend: number
-  totalLeads: number
-  totalImpressions: number
-  totalClicks: number
-  cpl: number
-  ctr: number
-  cpc: number
-  cpm: number
-}
+import { reportMetricsPath } from '@/lib/report-metrics-path'
 
 interface Props {
   reportId: string
   periodStart?: string
   periodEnd?: string
+  shareToken?: string
 }
 
-const PERIOD_OPTIONS = [
-  { label: 'Este mês', getValue: () => {
-    const now = new Date()
-    return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, end: now.toISOString().split('T')[0] }
-  }},
-  { label: '30 dias', getValue: () => {
-    const end = new Date()
-    const start = new Date(end); start.setDate(start.getDate() - 30)
-    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }
-  }},
-  { label: '90 dias', getValue: () => {
-    const end = new Date()
-    const start = new Date(end); start.setDate(start.getDate() - 90)
-    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }
-  }},
-]
+export function MetaAdsTab({ reportId, periodStart, periodEnd, shareToken }: Props) {
+  const authApi = useApiClient()
+  const sharedApi = useSharedApiClient()
+  const api = shareToken ? sharedApi : authApi
+  const { data: session } = useSession() as any
+  const isPublic = !!shareToken
 
-function KpiCard({ label, value, icon: Icon, sub }: { label: string; value: string; icon: React.ElementType; sub?: string }) {
-  return (
-    <div className="card p-5 border-[var(--color-border)]">
-      <div className="flex justify-between items-start mb-3">
-        <p className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wide">{label}</p>
-        <div className="p-2 rounded-lg bg-[var(--color-surface-2)] text-[var(--color-primary)]">
-          <Icon className="w-4 h-4" />
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">{value}</p>
-      {sub && <p className="text-xs text-[var(--color-muted-foreground)] mt-1">{sub}</p>}
-    </div>
-  )
-}
+  const initialPeriod: PeriodValue = useMemo(() => {
+    if (periodStart && periodEnd) return { key: 'custom', start: periodStart, end: periodEnd }
+    return buildPeriod('month')
+  }, [periodStart, periodEnd])
 
-function fmtCurrency(v: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-}
-function fmtNum(v: number) {
-  return new Intl.NumberFormat('pt-BR').format(Math.round(v))
-}
-function fmtPct(v: number) {
-  return `${v.toFixed(2)}%`
-}
+  const [period, setPeriod] = useState<PeriodValue>(initialPeriod)
+  const [compare, setCompare] = useState(false)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<StatusFilter>('all')
+  const [product, setProduct] = useState('')
+  const [stateFilter, setStateFilter] = useState('')
+  const [campaign, setCampaign] = useState('all')
 
-export function MetaAdsTab({ reportId, periodStart, periodEnd }: Props) {
-  const api = useApiClient()
-  const [metrics, setMetrics] = useState<MetaMetrics | null>(null)
+  const [metrics, setMetrics] = useState<MetaMetricsResponse | null>(null)
+  const [crm, setCrm] = useState<CrmEmbedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activePeriod, setActivePeriod] = useState(0)
-  const [campaignFilter, setCampaignFilter] = useState('all')
+  const [syncing, setSyncing] = useState(false)
 
-  const period = PERIOD_OPTIONS[activePeriod].getValue()
-  const startDate = periodStart || period.start
-  const endDate = periodEnd || period.end
+  const [selectedAdset, setSelectedAdset] = useState<AdsetRow | null>(null)
+  const [selectedCreative, setSelectedCreative] = useState<CreativeRow | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({
-        startDate,
-        endDate,
-        ...(campaignFilter !== 'all' && { campaign: campaignFilter }),
+        startDate: period.start,
+        endDate: period.end,
       })
-      const data = await api.get<MetaMetrics>(`/reports/${reportId}/metrics/meta-ads?${params}`)
+      if (campaign !== 'all') params.set('campaign', campaign)
+      if (status !== 'all') params.set('status', status)
+      if (product) params.set('product', product)
+      if (stateFilter) params.set('state', stateFilter)
+      if (search) params.set('search', search)
+
+      const [data, crmData] = await Promise.all([
+        api.get<MetaMetricsResponse>(`${reportMetricsPath(reportId, 'meta-ads', shareToken)}?${params.toString()}`),
+        api.get<CrmEmbedData>(`${reportMetricsPath(reportId, 'crm', shareToken)}?origin=meta`).catch(() => null),
+      ])
       setMetrics(data)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar métricas')
+      setCrm(crmData)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar métricas')
     } finally {
       setLoading(false)
     }
-  }, [reportId, startDate, endDate, campaignFilter])
+  }, [api, reportId, shareToken, period.start, period.end, campaign, status, product, stateFilter, search])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  if (loading) {
+  const handleRefresh = useCallback(async () => {
+    if (isPublic) {
+      await fetchData()
+      toast.success('Dados atualizados')
+      return
+    }
+    if (!metrics?.accounts?.length) {
+      fetchData()
+      return
+    }
+    setSyncing(true)
+    try {
+      const primary = metrics.accounts.find((a) => !a.isSecondary) ?? metrics.accounts[0]
+      await api.post(`/integrations/${primary.id}/sync`, {})
+      toast.success('Sincronização disparada — atualizando dados…')
+      await fetchData()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao sincronizar')
+    } finally {
+      setSyncing(false)
+    }
+  }, [api, metrics, fetchData, isPublic])
+
+  const handleExport = useCallback((entity: 'adsets' | 'creatives' | 'daily') => {
+    const params = new URLSearchParams({ startDate: period.start, endDate: period.end, entity })
+    const url = `${getPublicApiV1Base()}${reportMetricsPath(reportId, 'meta-ads/export.csv', shareToken)}?${params.toString()}`
+    const headers: Record<string, string> = {}
+    if (session?.accessToken) headers['Authorization'] = `Bearer ${session.accessToken}`
+    if (typeof window !== 'undefined') headers['X-Agency-Domain'] = window.location.hostname
+    fetch(url, { headers })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const downloadUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = downloadUrl
+        a.download = `meta-ads-${entity}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(downloadUrl)
+      })
+      .catch(() => toast.error('Erro ao exportar CSV'))
+  }, [period, reportId, shareToken, session])
+
+  const campaignCodes = useMemo(() => {
+    if (!metrics?.campaigns) return [] as string[]
+    return Array.from(new Set(metrics.campaigns.map((c) => c.code))).filter(Boolean)
+  }, [metrics?.campaigns])
+
+  const monthOptions = useMemo(() => Object.keys(metrics?.monthlySummaries ?? {}), [metrics?.monthlySummaries])
+
+  if (loading && !metrics) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="card p-5 border-[var(--color-border)] animate-pulse">
-              <div className="h-3 bg-[var(--color-surface-2)] rounded mb-3 w-24" />
-              <div className="h-7 bg-[var(--color-surface-2)] rounded w-32" />
-            </div>
+        <div className="h-12 animate-pulse bg-[var(--color-surface-2)] rounded-xl" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse bg-[var(--color-surface-2)] rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse bg-[var(--color-surface-2)] rounded-xl" />
           ))}
         </div>
       </div>
     )
   }
 
-  if (error || !metrics) {
+  if (error || !metrics?.summary) {
     return (
       <div className="card p-10 border-[var(--color-border)] text-center">
         <AlertCircle className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
-        <p className="font-medium text-[var(--color-foreground)]">Dados não disponíveis</p>
-        <p className="text-sm text-[var(--color-muted-foreground)] mt-1 mb-4">{error || 'Nenhum dado sincronizado ainda.'}</p>
+        <p className="font-medium">{error || 'Nenhum dado Meta Ads sincronizado para este relatório.'}</p>
+        <p className="text-xs text-[var(--color-muted-foreground)] mt-1 mb-3">
+          Verifique a integração Meta Ads do cliente e execute uma sincronização.
+        </p>
         <button onClick={fetchData} className="text-sm text-[var(--color-primary)] hover:underline inline-flex items-center gap-1">
           <RefreshCw className="w-3 h-3" /> Tentar novamente
         </button>
@@ -186,156 +183,111 @@ export function MetaAdsTab({ reportId, periodStart, periodEnd }: Props) {
     )
   }
 
-  const { summary, campaigns, dailyData, adsets, creatives } = metrics
-  const uniqueCampaigns = [...new Set(campaigns.map((c) => c.name))]
+  const config = metrics.config
 
   return (
-    <div className="space-y-6">
-      {/* Period filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {PERIOD_OPTIONS.map((p, i) => (
-          <button
-            key={p.label}
-            onClick={() => setActivePeriod(i)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-              activePeriod === i
-                ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-[var(--color-primary-foreground)]'
-                : 'border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-primary)]/50'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-          <span>{startDate}</span> → <span>{endDate}</span>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PeriodToolbar
+        value={period}
+        onChange={setPeriod}
+        compare={compare}
+        onCompareChange={setCompare}
+        onRefresh={handleRefresh}
+        onExport={handleExport}
+        monthOptions={monthOptions}
+        syncing={syncing}
+      />
 
-      {/* KPI Grid */}
-      {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard label="Gasto Total" value={fmtCurrency(summary.totalSpend)} icon={DollarSign} />
-          <KpiCard label="Leads" value={fmtNum(summary.totalLeads)} icon={Users} />
-          <KpiCard label="CPL" value={fmtCurrency(summary.cpl)} icon={Target} />
-          <KpiCard label="CTR" value={fmtPct(summary.ctr)} icon={MousePointerClick} />
-          <KpiCard label="Impressões" value={fmtNum(summary.totalImpressions)} icon={Eye} />
-          <KpiCard label="Cliques" value={fmtNum(summary.totalClicks)} icon={MousePointerClick} />
-          <KpiCard label="CPC" value={fmtCurrency(summary.cpc)} icon={TrendingDown} />
-          <KpiCard label="CPM" value={fmtCurrency(summary.cpm)} icon={Layers} />
+      <FilterToolbar
+        search={search}
+        onSearchChange={setSearch}
+        status={status}
+        onStatusChange={setStatus}
+        product={product}
+        onProductChange={setProduct}
+        state={stateFilter}
+        onStateChange={setStateFilter}
+        campaign={campaign}
+        onCampaignChange={setCampaign}
+        campaignCodes={campaignCodes}
+        config={config}
+      />
+
+      {loading && metrics && (
+        <div className="text-xs text-[var(--color-muted-foreground)] flex items-center gap-1.5">
+          <Loader2 className="w-3 h-3 animate-spin" /> Atualizando…
         </div>
       )}
 
-      {/* Daily leads chart */}
-      {dailyData.length > 0 && (
-        <div className="card p-6 border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Leads por Dia</h3>
-            {/* Campaign filter */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                onClick={() => setCampaignFilter('all')}
-                className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                  campaignFilter === 'all'
-                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                    : 'border-[var(--color-border)] text-[var(--color-muted-foreground)]'
-                }`}
-              >
-                Todas
-              </button>
-              {uniqueCampaigns.slice(0, 5).map((name) => (
-                <button
-                  key={name}
-                  onClick={() => setCampaignFilter(name.slice(0, 4).toUpperCase())}
-                  className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                    campaignFilter === name.slice(0, 4).toUpperCase()
-                      ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                      : 'border-[var(--color-border)] text-[var(--color-muted-foreground)]'
-                  }`}
-                >
-                  {name.slice(0, 6)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={dailyData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="leadGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="date" tick={{ fill: 'var(--color-muted-foreground)', fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
-              <YAxis tick={{ fill: 'var(--color-muted-foreground)', fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--color-foreground)' }}
-              />
-              <Area type="monotone" dataKey="leads" stroke="var(--color-primary)" fill="url(#leadGrad)" strokeWidth={2} name="Leads" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <HeroRow
+        summary={metrics.summary}
+        previous={metrics.previousPeriodSummary}
+        hierarchy={metrics.hierarchy}
+        config={config}
+        compare={compare}
+      />
+
+      <KpiGrid
+        summary={metrics.summary}
+        previous={metrics.previousPeriodSummary}
+        trend={metrics.trendDaily}
+        config={config}
+        compare={compare}
+      />
+
+      {metrics.annualSummary && (
+        <AnnualSummary annual={metrics.annualSummary} monthly={metrics.monthlySummaries} />
       )}
 
-      {/* Campaigns table */}
-      {campaigns.length > 0 && (
-        <div className="card overflow-hidden border-[var(--color-border)]">
-          <div className="p-4 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Campanhas</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--color-surface-2)] text-xs text-[var(--color-muted-foreground)] uppercase">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Campanha</th>
-                  <th className="px-4 py-3 text-right font-medium">Gasto</th>
-                  <th className="px-4 py-3 text-right font-medium">Leads</th>
-                  <th className="px-4 py-3 text-right font-medium">CPL</th>
-                  <th className="px-4 py-3 text-right font-medium">CTR</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {campaigns.map((c) => (
-                  <tr key={c.id} className="hover:bg-[var(--color-surface-2)] transition-colors">
-                    <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">{c.name}</td>
-                    <td className="px-4 py-3 text-right text-[var(--color-foreground)]">{fmtCurrency(c.spend)}</td>
-                    <td className="px-4 py-3 text-right text-[var(--color-foreground)]">{fmtNum(c.leads)}</td>
-                    <td className="px-4 py-3 text-right text-[var(--color-foreground)]">{fmtCurrency(c.cpl)}</td>
-                    <td className="px-4 py-3 text-right text-[var(--color-foreground)]">{fmtPct(c.ctr)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {metrics.verbaProduto.products.length > 0 && (
+        <VerbaProdutoSection data={metrics.verbaProduto} config={config} />
       )}
 
-      {/* Creatives */}
-      {creatives.length > 0 && (
-        <div className="card p-5 border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-[var(--color-foreground)] mb-4">Criativos</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {creatives.slice(0, 8).map((c) => (
-              <div key={c.ad_id} className="rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                {c.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.thumbnailUrl} alt={c.ad_name} className="w-full aspect-video object-cover" />
-                ) : (
-                  <div className="w-full aspect-video flex items-center justify-center">
-                    <ImageIcon className="w-8 h-8 text-[var(--color-muted)]" />
-                  </div>
-                )}
-                <div className="p-3">
-                  <p className="text-xs font-medium text-[var(--color-foreground)] line-clamp-1">{c.ad_name}</p>
-                  <div className="flex justify-between mt-1.5 text-xs text-[var(--color-muted-foreground)]">
-                    <span>{fmtCurrency(c.spend)}</span>
-                    <span>{fmtNum(c.leads)} leads</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <BudgetPacing items={metrics.budgetPacing} config={config} />
+
+      <ChartsRow dailyData={metrics.dailyData} />
+
+      <FunnelInsights
+        summary={metrics.summary}
+        adsets={metrics.adsetTable}
+        creatives={metrics.creatives}
+        config={config}
+      />
+
+      {crm?.pipeline && <CrmEmbed crm={crm} metaSummary={metrics.summary} />}
+
+      {metrics.rioVerde && <RioVerdeSection data={metrics.rioVerde} config={config} />}
+
+      <AdsetTable
+        rows={metrics.adsetTable}
+        config={config}
+        onSelect={setSelectedAdset}
+      />
+
+      <CreativesCarousel
+        creatives={metrics.creatives}
+        config={config}
+        onSelect={setSelectedCreative}
+      />
+
+      {selectedAdset && (
+        <AdsetDetailModal
+          reportId={reportId}
+          adsetId={selectedAdset.id}
+          startDate={period.start}
+          endDate={period.end}
+          config={config}
+          shareToken={shareToken}
+          onClose={() => setSelectedAdset(null)}
+        />
+      )}
+
+      {selectedCreative && (
+        <CreativeDetailModal
+          creative={selectedCreative}
+          config={config}
+          onClose={() => setSelectedCreative(null)}
+        />
       )}
     </div>
   )

@@ -126,6 +126,7 @@ model Agency {
   users     User[]
   reports   Report[]
   auditLogs AgencyAuditLog[]
+  scheduledPosts ScheduledPost[]
 
   @@map("agencies")
 }
@@ -149,6 +150,8 @@ model Client {
   integrations Integration[]
   reports      Report[]
   userClients  UserClient[]
+  scheduledPosts ScheduledPost[]
+  metaConfig   ClientMetaConfig?
 
   @@index([agencyId])
   @@index([agencyId, isActive])
@@ -372,4 +375,70 @@ model ReportIntegration {
 
   @@id([reportId, integrationId])
   @@map("report_integrations")
+}
+
+// ---------------------------------------------------------------------------
+// SCHEDULED_POST — Agendamento de posts orgânicos (IG/FB)
+// ---------------------------------------------------------------------------
+enum ScheduledPostStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum ScheduledPostPlatform {
+  INSTAGRAM
+  FACEBOOK
+}
+
+model ScheduledPost {
+  id          String               @id @default(uuid()) @db.Uuid
+  agencyId    String               @db.Uuid
+  clientId    String               @db.Uuid
+  platform    ScheduledPostPlatform
+  caption     String?              @db.Text
+  mediaUrl    String               @db.VarChar(1024)
+  scheduledAt DateTime
+  status      ScheduledPostStatus  @default(PENDING)
+  externalId  String?              @db.VarChar(255)
+  errorMsg    String?              @db.Text
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId, clientId, status])
+  @@index([scheduledAt, status])
+  @@map("scheduled_posts")
+}
+
+// ---------------------------------------------------------------------------
+// CLIENT_META_CONFIG — Configuração por cliente para Meta Ads
+// (produtos, estados, distribuição UF, thresholds) — substitui hardcode
+// ---------------------------------------------------------------------------
+model ClientMetaConfig {
+  id                   String   @id @default(uuid()) @db.Uuid
+  clientId             String   @unique @db.Uuid
+  // [{ key, label, color, monthlyBudgetTarget, namePatterns: string[] }]
+  products             Json
+  // [{ code, label, aliases: string[] }]
+  states               Json
+  // { [productKey]: { [stateCode]: pct } } — soma 100% por produto
+  stateBudgetByProduct Json
+  // { ctr:{good,warn}, cpc:{warn,bad}, cpm:{warn,bad}, cpl:{warn,bad} }
+  thresholds           Json
+  // Fator multiplicador para alcance estimado (default 0.72)
+  reachFactor          Float    @default(0.72)
+  // Cor da seção secundária (Rio Verde / segunda conta)
+  secondaryAccountColor String  @default("#06B6D4") @db.VarChar(7)
+  // Janela em dias para sparklines (default 14)
+  sparklineDays        Int      @default(14)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_meta_configs")
 }

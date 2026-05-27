@@ -5,6 +5,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import {
+  extractSlugFromHost,
+  getDevLocalhostFallbackSlug,
+  isAdminHost,
+} from '@common/config/domains';
 import { PrismaService } from '@/prisma/prisma.service';
 import { tenantStorage } from '@common/context/tenant.context';
 
@@ -25,6 +30,7 @@ const PUBLIC_PATHS_SKIP_TENANT = [
   '/api/docs',
   '/api/v1/onboarding',
   '/api/v1/super-admin',
+  '/api/v1/integrations/google-ads/callback',
 ];
 
 @Injectable()
@@ -40,6 +46,11 @@ export class TenantMiddleware implements NestMiddleware {
     }
 
     const hostname = this.extractHostname(req);
+
+    if (isAdminHost(hostname)) {
+      return next();
+    }
+
     const tenant = await this.resolveTenant(hostname);
 
     if (!tenant) {
@@ -79,14 +90,10 @@ export class TenantMiddleware implements NestMiddleware {
       return cached;
     }
 
-    // 2. Extrai slug do subdomínio (ex: "agencia" de "agencia.trax.app")
-    const baseDomain = process.env.TRAX_BASE_DOMAIN ?? 'trax.app';
-    const slugMatch = hostname.match(new RegExp(`^([^.]+)\\.${baseDomain}$`));
-    let slug = slugMatch?.[1];
+    let slug = extractSlugFromHost(hostname);
 
-    // Fallback de desenvolvimento: se acessar 'localhost' puro, direciona para agenciademo
-    if (!slug && hostname === 'localhost' && process.env.NODE_ENV !== 'production') {
-      slug = 'agenciademo';
+    if (!slug) {
+      slug = getDevLocalhostFallbackSlug(hostname);
     }
 
     // 3. Busca no banco por customDomain ou slug

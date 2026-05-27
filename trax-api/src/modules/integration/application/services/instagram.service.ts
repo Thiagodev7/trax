@@ -26,11 +26,12 @@ export class InstagramService {
       name: string;
       biography?: string;
       followers_count: number;
+      follows_count?: number;
       media_count: number;
       profile_picture_url?: string;
       username: string;
     }>(`${creds.igUserId}`, {
-      fields: 'id,name,biography,followers_count,media_count,profile_picture_url,username',
+      fields: 'id,name,biography,followers_count,follows_count,media_count,profile_picture_url,username',
       access_token: creds.accessToken,
     });
     return {
@@ -39,6 +40,7 @@ export class InstagramService {
       username: data.username,
       biography: data.biography,
       followersCount: data.followers_count,
+      followingCount: data.follows_count,
       mediaCount: data.media_count,
       profilePictureUrl: data.profile_picture_url,
     };
@@ -48,7 +50,7 @@ export class InstagramService {
     creds: IgCredentials,
     period: 'day' | 'week' | 'month' | 'lifetime' = 'month',
   ): Promise<Array<Record<string, unknown>>> {
-    const metrics = ['reach', 'impressions', 'profile_views', 'follower_count'];
+    const metrics = ['reach', 'impressions', 'profile_views', 'follower_count', 'accounts_engaged', 'total_interactions', 'website_clicks'];
     const data = await this.graphGet<{
       data: Array<{ name: string; values: Array<{ value: number; end_time: string }> }>;
     }>(`${creds.igUserId}/insights`, {

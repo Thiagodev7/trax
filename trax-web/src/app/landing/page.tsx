@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { tenantHostname } from '@/lib/domains'
 import {
   BarChart3,
   Zap,
@@ -23,6 +24,8 @@ import {
   Link2,
   FileText,
 } from 'lucide-react'
+
+const EXAMPLE_TENANT_HOST = tenantHostname('suaagencia')
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -194,7 +197,7 @@ function Hero() {
                 <div className="w-3 h-3 rounded-full bg-green-500/50" />
               </div>
               <div className="flex-1 mx-3 bg-white/5 rounded-md px-3 py-1 text-xs text-white/30 text-center">
-                suaagencia.traxsolucoes.com.br
+                {EXAMPLE_TENANT_HOST}
               </div>
             </div>
 

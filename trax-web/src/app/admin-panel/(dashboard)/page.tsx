@@ -13,6 +13,7 @@ import {
   CreditCard,
 } from 'lucide-react'
 import { adminGetStats, adminGetHealth, PLAN_LABELS, PLAN_COLORS } from '@/lib/admin-api'
+import { tenantHostname } from '@/lib/domains'
 
 export default async function AdminDashboardPage() {
   const [stats, health] = await Promise.all([adminGetStats(), adminGetHealth()])
@@ -166,7 +167,7 @@ export default async function AdminDashboardPage() {
                 >
                   <div>
                     <p className="text-sm font-semibold text-white">{agency.name}</p>
-                    <p className="text-xs text-white/30">{agency.slug}.traxsolucoes.com.br</p>
+                    <p className="text-xs text-white/30">{tenantHostname(agency.slug)}</p>
                   </div>
                   <span className="text-sm font-bold text-indigo-400">{agency.clientCount} clientes</span>
                 </Link>
@@ -228,7 +229,7 @@ export default async function AdminDashboardPage() {
               >
                 <div>
                   <p className="text-sm font-semibold text-white">{agency.name}</p>
-                  <p className="text-xs text-white/30">{agency.slug}.traxsolucoes.com.br</p>
+                  <p className="text-xs text-white/30">{tenantHostname(agency.slug)}</p>
                 </div>
                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PLAN_COLORS[agency.plan] ?? ''}`}>
                   {PLAN_LABELS[agency.plan] ?? agency.plan}

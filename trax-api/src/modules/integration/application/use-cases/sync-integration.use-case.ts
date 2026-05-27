@@ -4,6 +4,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import { decryptCredentials } from '../crypto.helper';
 import { MetaAdsService } from '../services/meta-ads.service';
+import { GoogleAdsService } from '../services/google-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
@@ -33,6 +34,7 @@ export class SyncIntegrationUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly metaAds: MetaAdsService,
+    private readonly googleAds: GoogleAdsService,
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
@@ -56,6 +58,9 @@ export class SyncIntegrationUseCase {
       switch (integration.provider) {
         case 'META_ADS':
           synced = await this.syncMetaAds(integration.id, creds as any, startDate, endDate);
+          break;
+        case 'GOOGLE_ADS':
+          synced = await this.syncGoogleAds(integration.id, creds as any, startDate, endDate);
           break;
         case 'INSTAGRAM':
           synced = await this.syncInstagram(integration.id, creds as any);
@@ -197,6 +202,28 @@ export class SyncIntegrationUseCase {
       count++;
     }
 
+    return count;
+  }
+
+  private async syncGoogleAds(
+    integrationId: string,
+    creds: { refreshToken: string; customerId: string; loginCustomerId?: string },
+    startDate: string,
+    endDate: string,
+  ): Promise<number> {
+    let count = 0;
+    const daily = await this.googleAds.fetchCampaignMetrics(creds, startDate, endDate);
+    for (const row of daily) {
+      await this.upsertMetric(
+        integrationId,
+        row.date as string,
+        'campaign',
+        row.campaign_id as string,
+        row.campaign_name as string,
+        row,
+      );
+      count++;
+    }
     return count;
   }
 

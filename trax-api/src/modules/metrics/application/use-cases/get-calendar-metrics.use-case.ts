@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { detectProduct } from '@common/utils/meta-heuristics';
 
 interface CalendarQuery {
   agencyId: string;
@@ -17,17 +18,23 @@ export class GetCalendarMetricsUseCase {
   async execute(query: CalendarQuery) {
     const report = await this.prisma.report.findFirst({
       where: { id: query.reportId, agencyId: query.agencyId },
-      include: { integrations: { include: { integration: true } } },
     });
     if (!report) throw new NotFoundException('Relatório não encontrado.');
 
-    const integrations = report.integrations.map((ri) => ri.integration);
-    const organicIntegrations = integrations.filter(
-      (i) => (i.provider === 'INSTAGRAM' || i.provider === 'FACEBOOK_PAGE') && i.status === 'ACTIVE',
-    );
+    const links = await this.prisma.reportIntegration.findMany({
+      where: { reportId: query.reportId },
+      include: { integration: true },
+    });
+
+    const organicIntegrations = links
+      .map((l) => l.integration)
+      .filter((i) => (i.provider === 'INSTAGRAM' || i.provider === 'FACEBOOK_PAGE') && i.status === 'ACTIVE');
+
+    const moduleConfig = (report.moduleConfig ?? {}) as Record<string, unknown>;
+    const editorialScripts = (moduleConfig.editorialScripts as unknown[]) ?? null;
 
     if (organicIntegrations.length === 0) {
-      return { posts: [] };
+      return { posts: [], editorialScripts };
     }
 
     const ids = organicIntegrations.map((i) => i.id);
@@ -47,19 +54,22 @@ export class GetCalendarMetricsUseCase {
 
     const posts = rows.map((r) => {
       const d = r.data as Record<string, unknown>;
+      const caption = String(d.caption ?? d.message ?? '');
+      const productTag = detectProduct(caption);
       return {
         id: r.entityId,
         date: r.date.toISOString().split('T')[0],
         platform: r.integration.provider === 'INSTAGRAM' ? 'instagram' : 'facebook',
-        caption: d.caption ?? d.message ?? '',
+        caption,
         thumbnailUrl: d.thumbnailUrl,
         permalink: d.permalink,
         likeCount: d.likeCount ?? 0,
         commentsCount: d.commentsCount ?? 0,
         mediaType: d.mediaType ?? 'IMAGE',
+        productTag,
       };
     });
 
-    return { posts };
+    return { posts, editorialScripts };
   }
 }
