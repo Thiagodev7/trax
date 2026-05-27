@@ -73,10 +73,18 @@ GET /api/tls-verify?domain={slug}.traxsolucoes.com.br
 
 Implementado em `trax-web/src/app/api/tls-verify/route.ts`.
 
+## Acesso SSH
+
+Use sempre o compose de produção na VPS (`-f docker-compose.prod.yml`). Para sessões longas (logs, deploy), evite quedas de conexão:
+
+```bash
+ssh -o ServerAliveInterval=30 root@<IP_DO_SERVIDOR>
+```
+
 ## Operações
 
 ```bash
-# Ver logs
+# Ver logs (sempre com -f docker-compose.prod.yml na VPS)
 docker compose -f docker-compose.prod.yml logs -f
 
 # Rebuild após deploy
@@ -93,7 +101,7 @@ docker compose -f docker-compose.prod.yml down
 
 - [ ] https://traxsolucoes.com.br carrega a landing
 - [ ] https://admin.traxsolucoes.com.br/admin-panel/login funciona
-- [ ] https://api.traxsolucoes.com.br/api/health responde OK
+- [ ] https://api.traxsolucoes.com.br responde (ex.: login ou endpoint autenticado; health interno em `/api/super-admin/health`)
 - [ ] Subdomínio de agência existente abre com TLS válido
 - [ ] OAuth Google Ads usa `GOOGLE_ADS_REDIRECT_URI` de produção
 
