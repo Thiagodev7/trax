@@ -9,9 +9,12 @@ import { TestIntegrationUseCase } from './application/use-cases/test-integration
 import { MetaAdsService } from './application/services/meta-ads.service';
 import { GoogleAdsService } from './application/services/google-ads.service';
 import { GoogleAdsOAuthService } from './application/services/google-ads-oauth.service';
+import { MetaOAuthService } from './application/services/meta-oauth.service';
 import { InstagramService } from './application/services/instagram.service';
 import { FacebookPageService } from './application/services/facebook-page.service';
 import { NectarCrmService } from './application/services/nectar-crm.service';
+import { RdStationService } from './application/services/rd-station.service';
+import { RdStationOAuthService } from './application/services/rd-station-oauth.service';
 import { SyncScheduler } from './application/services/sync.scheduler';
 import {
   ConnectGoogleAdsUseCase,
@@ -19,28 +22,56 @@ import {
   FinalizeGoogleAdsOAuthUseCase,
   GoogleAdsOAuthCallbackUseCase,
 } from './application/use-cases/google-ads-oauth.use-cases';
+import {
+  ConnectMetaUseCase,
+  MetaOAuthCallbackUseCase,
+  ListMetaAdAccountsUseCase,
+  ListMetaPagesUseCase,
+  FinalizeMetaOAuthUseCase,
+} from './application/use-cases/meta-oauth.use-cases';
+import {
+  ConnectRdStationUseCase,
+  RdStationCallbackUseCase,
+  FinalizeRdStationUseCase,
+} from './application/use-cases/rd-station-oauth.use-cases';
 
 @Module({
   controllers: [IntegrationController],
   providers: [
+    // CRUD
     ListIntegrationsUseCase,
     CreateIntegrationUseCase,
     UpdateIntegrationUseCase,
     DeleteIntegrationUseCase,
     SyncIntegrationUseCase,
     TestIntegrationUseCase,
+    // Services
     MetaAdsService,
+    MetaOAuthService,
     GoogleAdsService,
     GoogleAdsOAuthService,
+    InstagramService,
+    FacebookPageService,
+    NectarCrmService,
+    RdStationService,
+    RdStationOAuthService,
+    SyncScheduler,
+    // Google Ads OAuth use-cases
     ConnectGoogleAdsUseCase,
     ListGoogleAdsCustomersUseCase,
     FinalizeGoogleAdsOAuthUseCase,
     GoogleAdsOAuthCallbackUseCase,
-    InstagramService,
-    FacebookPageService,
-    NectarCrmService,
-    SyncScheduler,
+    // Meta OAuth use-cases
+    ConnectMetaUseCase,
+    MetaOAuthCallbackUseCase,
+    ListMetaAdAccountsUseCase,
+    ListMetaPagesUseCase,
+    FinalizeMetaOAuthUseCase,
+    // RD Station OAuth use-cases
+    ConnectRdStationUseCase,
+    RdStationCallbackUseCase,
+    FinalizeRdStationUseCase,
   ],
-  exports: [MetaAdsService, GoogleAdsService, InstagramService, FacebookPageService, NectarCrmService],
+  exports: [MetaAdsService, GoogleAdsService, InstagramService, FacebookPageService, NectarCrmService, RdStationService],
 })
 export class IntegrationModule {}

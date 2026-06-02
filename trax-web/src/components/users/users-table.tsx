@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, UserPlus, Shield, Eye, Building2,
-  MoreVertical, Trash2, Power, ChevronDown,
-  Check, Copy, X, Loader2,
+  MoreVertical, Trash2, Power, UserCog,
+  Check, Copy, X, Loader2, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApiClient } from '@/lib/api-client-browser'
@@ -16,20 +16,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
+import type { ApiUser, ApiUserRole, AgencyPlanInfo } from '@/types/api'
 
-type UserRole = 'AGENCY_ADMIN' | 'AGENCY_VIEWER' | 'CLIENT_VIEWER'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-  avatarUrl?: string | null
-  isActive: boolean
-  lastLoginAt?: string | null
-  createdAt: string
-  userClients: { client: { id: string; name: string } }[]
-}
+type UserRole = ApiUserRole
 
 interface Client {
   id: string
@@ -37,8 +26,9 @@ interface Client {
 }
 
 interface UsersTableProps {
-  users: User[]
+  users: ApiUser[]
   clients: Client[]
+  plan: AgencyPlanInfo | null
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: typeof Shield; color: string; bg: string }> = {
@@ -66,12 +56,12 @@ function RoleBadge({ role }: { role: UserRole }) {
   )
 }
 
-function UserAvatar({ user }: { user: User }) {
+function UserAvatar({ user }: { user: ApiUser }) {
   if (user.avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={user.avatarUrl} alt={user.name} className="w-9 h-9 rounded-full object-cover ring-2 ring-[var(--color-border)]" />
   }
-  const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const initials = user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   const colors = ['bg-violet-500', 'bg-sky-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500']
   const colorIdx = user.name.charCodeAt(0) % colors.length
   return (
@@ -241,13 +231,123 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
   )
 }
 
-export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
+// ─── Edit Role Modal ──────────────────────────────────────────────────────────
+function EditRoleModal({
+  user,
+  clients,
+  onClose,
+}: {
+  user: ApiUser
+  clients: Client[]
+  onClose: () => void
+}) {
+  const api = useApiClient()
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [selectedClients, setSelectedClients] = useState<string[]>(
+    user.userClients.map(uc => uc.client.id),
+  )
+
+  const schema = z.object({
+    role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'CLIENT_VIEWER']),
+  })
+  type FormData = z.infer<typeof schema>
+
+  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<FormData>({
+    defaultValues: { role: user.role },
+  })
+
+  const role = watch('role')
+  const isLoading = isSubmitting || isPending
+
+  async function onSubmit(data: FormData) {
+    try {
+      await api.patch(`/users/${user.id}`, {
+        role: data.role,
+        clientIds: data.role === 'CLIENT_VIEWER' ? selectedClients : undefined,
+      })
+      toast.success('Cargo atualizado.')
+      startTransition(() => router.refresh())
+      onClose()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar cargo.')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-[var(--color-foreground)]">Nova função</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(ROLE_CONFIG) as UserRole[]).map((r) => {
+            const cfg = ROLE_CONFIG[r]
+            const Icon = cfg.icon
+            return (
+              <label key={r} className="cursor-pointer">
+                <input type="radio" value={r} {...register('role')} className="sr-only peer" />
+                <div className={cn(
+                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] transition-all',
+                  'peer-checked:border-[var(--color-primary)] peer-checked:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)]/40',
+                )}>
+                  <Icon className={cn('w-4 h-4', cfg.color)} />
+                  <span className="text-xs font-medium text-[var(--color-foreground)]">{cfg.label}</span>
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {role === 'CLIENT_VIEWER' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+          <label className="text-sm font-medium text-[var(--color-foreground)]">
+            Clientes visíveis <span className="text-red-400">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+            {clients.map((c) => (
+              <label key={c.id} className="cursor-pointer flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-[var(--color-primary)]"
+                  checked={selectedClients.includes(c.id)}
+                  onChange={(e) => setSelectedClients(prev =>
+                    e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                  )}
+                />
+                <span className="text-sm text-[var(--color-foreground)] truncate">{c.name}</span>
+              </label>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      <div className="flex gap-3 pt-1">
+        <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm rounded-xl bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-border)] transition-colors">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex-1 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          Salvar
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export function UsersTable({ users: initialUsers, clients, plan }: UsersTableProps) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [editRoleUser, setEditRoleUser] = useState<ApiUser | null>(null)
 
-  async function toggleActive(user: User) {
+  const atLimit = plan ? initialUsers.filter(u => u.isActive).length >= plan.maxUsers : false
+
+  async function toggleActive(user: ApiUser) {
     try {
       await api.patch(`/users/${user.id}`, { isActive: !user.isActive })
       toast.success(user.isActive ? 'Usuário desativado.' : 'Usuário ativado.')
@@ -257,7 +357,7 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
     }
   }
 
-  async function handleDelete(user: User) {
+  async function handleDelete(user: ApiUser) {
     if (!confirm(`Tem certeza que deseja remover ${user.name}?`)) return
     try {
       await api.delete(`/users/${user.id}`)
@@ -270,17 +370,37 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
 
   return (
     <>
+      {/* Plan limit banner */}
+      {plan && atLimit && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 mb-2"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-300">
+            <span className="font-semibold">Limite atingido.</span> Seu plano <strong>{plan.plan}</strong> permite {plan.maxUsers} usuário(s) ativo(s).{' '}
+            <a href="/settings/plan" className="underline hover:text-amber-200 transition-colors">Fazer upgrade</a> para convidar mais membros.
+          </p>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Equipe</h2>
           <p className="text-[var(--color-muted-foreground)] mt-0.5 text-sm">
-            {initialUsers.length} {initialUsers.length === 1 ? 'membro' : 'membros'} na agência
+            {initialUsers.filter(u => u.isActive).length}
+            {plan ? `/${plan.maxUsers}` : ''} {initialUsers.filter(u => u.isActive).length === 1 ? 'membro ativo' : 'membros ativos'}
           </p>
         </div>
         <Dialog.Root open={inviteOpen} onOpenChange={setInviteOpen}>
           <Dialog.Trigger asChild>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-lg glow-primary">
+            <button
+              disabled={atLimit}
+              title={atLimit ? `Limite de ${plan?.maxUsers} usuários atingido` : undefined}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-lg glow-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
               <UserPlus className="w-4 h-4" />
               Convidar Usuário
             </button>
@@ -307,6 +427,31 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
           </Dialog.Portal>
         </Dialog.Root>
       </div>
+
+      {/* Edit Role Dialog */}
+      <Dialog.Root open={!!editRoleUser} onOpenChange={(open) => { if (!open) setEditRoleUser(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <Dialog.Title className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Alterar Cargo
+                </Dialog.Title>
+                <Dialog.Description className="text-sm text-[var(--color-muted-foreground)]">
+                  {editRoleUser?.name}
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className="p-1.5 rounded-lg hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
+                <X className="w-4 h-4" />
+              </Dialog.Close>
+            </div>
+            {editRoleUser && (
+              <EditRoleModal user={editRoleUser} clients={clients} onClose={() => setEditRoleUser(null)} />
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -424,6 +569,13 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
                               className="min-w-[160px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl p-1 z-50"
                               align="end"
                             >
+                              <DropdownMenu.Item
+                                onClick={() => setEditRoleUser(user)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] rounded-lg hover:bg-[var(--color-surface-2)] cursor-pointer outline-none"
+                              >
+                                <UserCog className="w-3.5 h-3.5" />
+                                Alterar cargo
+                              </DropdownMenu.Item>
                               <DropdownMenu.Item
                                 onClick={() => toggleActive(user)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] rounded-lg hover:bg-[var(--color-surface-2)] cursor-pointer outline-none"

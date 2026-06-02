@@ -2,9 +2,11 @@
 
 import { Suspense, useState } from 'react'
 import { GoogleAdsOAuthHandler } from './google-ads-oauth-handler'
+import { MetaOAuthHandler } from './meta-oauth-handler'
+import { RdStationOAuthHandler } from './rd-station-oauth-handler'
 import {
   RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle,
-  Trash2, Pencil, Plug, Zap
+  Trash2, Pencil, Plug, Zap, RotateCcw
 } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { toast } from 'sonner'
@@ -13,7 +15,8 @@ import { EditIntegrationDialog } from './edit-integration-dialog'
 
 export type IntegrationProvider =
   | 'META_ADS' | 'INSTAGRAM' | 'FACEBOOK_PAGE' | 'NECTAR_CRM'
-  | 'GOOGLE_ADS' | 'GOOGLE_ANALYTICS' | 'TIKTOK_ADS' | 'LINKEDIN_ADS' | 'CUSTOM'
+  | 'GOOGLE_ADS' | 'GOOGLE_ANALYTICS' | 'TIKTOK_ADS' | 'LINKEDIN_ADS'
+  | 'RD_STATION' | 'CUSTOM'
 
 export type IntegrationStatus = 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'PENDING_AUTH'
 
@@ -39,6 +42,7 @@ const PROVIDER_LABELS: Record<IntegrationProvider, string> = {
   GOOGLE_ANALYTICS: 'Google Analytics',
   TIKTOK_ADS: 'TikTok Ads',
   LINKEDIN_ADS: 'LinkedIn Ads',
+  RD_STATION: 'RD Station',
   CUSTOM: 'Personalizado',
 }
 
@@ -51,6 +55,7 @@ const PROVIDER_COLORS: Record<IntegrationProvider, string> = {
   GOOGLE_ANALYTICS: '#F4B400',
   TIKTOK_ADS: '#000000',
   LINKEDIN_ADS: '#0077B5',
+  RD_STATION: '#00A0E3',
   CUSTOM: 'var(--color-primary)',
 }
 
@@ -63,8 +68,12 @@ const PROVIDER_ICONS: Record<IntegrationProvider, string> = {
   GOOGLE_ANALYTICS: '📈',
   TIKTOK_ADS: '🎵',
   LINKEDIN_ADS: '💼',
+  RD_STATION: '🚀',
   CUSTOM: '⚡',
 }
+
+/** Providers that support 1-click reconnect via OAuth */
+const OAUTH_PROVIDERS = new Set<IntegrationProvider>(['GOOGLE_ADS', 'META_ADS', 'INSTAGRAM', 'FACEBOOK_PAGE', 'RD_STATION'])
 
 function StatusBadge({ status }: { status: IntegrationStatus }) {
   const configs = {
@@ -90,6 +99,7 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>(initialIntegrations)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [testing, setTesting] = useState<string | null>(null)
+  const [reconnecting, setReconnecting] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<Integration | null>(null)
   const api = useApiClient()
 
@@ -133,6 +143,33 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
     }
   }
 
+  async function handleReconnect(integration: Integration) {
+    setReconnecting(integration.id)
+    try {
+      const returnUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/clients/${clientId}/integrations`
+        : undefined
+      const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+
+      let endpoint = ''
+      if (integration.provider === 'GOOGLE_ADS') {
+        endpoint = `/clients/${clientId}/integrations/google-ads/connect${params}`
+      } else if (['META_ADS', 'INSTAGRAM', 'FACEBOOK_PAGE'].includes(integration.provider)) {
+        const scopeGroup = integration.provider === 'META_ADS' ? 'ads' : 'instagram'
+        endpoint = `/clients/${clientId}/integrations/meta/connect?scopeGroup=${scopeGroup}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+      } else if (integration.provider === 'RD_STATION') {
+        endpoint = `/clients/${clientId}/integrations/rd-station/connect${params}`
+      }
+
+      if (!endpoint) { toast.error('Reconexão não suportada para este provider.'); return }
+      const { url } = await api.get<{ url: string }>(endpoint)
+      window.location.href = url
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao reconectar')
+      setReconnecting(null)
+    }
+  }
+
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Remover integração "${name}"? Os dados sincronizados serão excluídos.`)) return
     try {
@@ -157,6 +194,8 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
     <div className="space-y-4">
       <Suspense fallback={null}>
         <GoogleAdsOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
+        <MetaOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
+        <RdStationOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
       </Suspense>
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -182,20 +221,36 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
             const icon = PROVIDER_ICONS[integration.provider]
             const isSyncing = syncing === integration.id
             const isTesting = testing === integration.id
+            const isReconnecting = reconnecting === integration.id
+            const isError = integration.status === 'ERROR'
+            const canReconnect = OAUTH_PROVIDERS.has(integration.provider)
 
             return (
               <div
                 key={integration.id}
-                className="card p-5 border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors group"
+                className={`card p-5 transition-colors group ${
+                  isError
+                    ? 'border-red-500/40 hover:border-red-400/60'
+                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
+                }`}
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 relative"
                       style={{ background: `${color}20`, border: `1px solid ${color}40` }}
                     >
                       {icon}
+                      {/* Health indicator dot */}
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--color-surface)] ${
+                          integration.status === 'ACTIVE' ? 'bg-emerald-400' :
+                          integration.status === 'ERROR' ? 'bg-red-400 animate-pulse' :
+                          integration.status === 'PENDING_AUTH' ? 'bg-amber-400' :
+                          'bg-slate-400'
+                        }`}
+                      />
                     </div>
                     <div>
                       <p className="font-semibold text-[var(--color-foreground)] text-sm">{label}</p>
@@ -218,12 +273,24 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
                       'Nunca sincronizado'
                     )}
                   </div>
-                  {integration.status === 'ERROR' && integration.lastErrorMsg && (
+                  {isError && integration.lastErrorMsg && (
                     <p className="text-xs text-red-400 bg-red-500/10 rounded p-1.5 mt-1">
-                      {integration.lastErrorMsg.slice(0, 100)}
+                      {integration.lastErrorMsg.slice(0, 120)}
                     </p>
                   )}
                 </div>
+
+                {/* Reconnect CTA when ERROR + OAuth */}
+                {isError && canReconnect && (
+                  <button
+                    onClick={() => handleReconnect(integration)}
+                    disabled={isReconnecting}
+                    className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all disabled:opacity-60"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin' : ''}`} />
+                    {isReconnecting ? 'Redirecionando…' : 'Reconectar agora'}
+                  </button>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -247,12 +314,14 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
                     <button
                       onClick={() => setEditTarget(integration)}
                       className="p-1.5 rounded-md text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-2)] transition-colors"
+                      title="Editar integração"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(integration.id, label)}
                       className="p-1.5 rounded-md text-[var(--color-muted-foreground)] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                      title="Remover integração"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

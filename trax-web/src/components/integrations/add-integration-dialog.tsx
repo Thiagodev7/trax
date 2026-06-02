@@ -13,70 +13,57 @@ interface GuideDef {
   links?: { label: string; url: string }[]
 }
 
-const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[]; guide?: GuideDef; oauth?: boolean }> = [
+const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string; fields: FieldDef[]; guide?: GuideDef; oauth?: boolean; metaOauth?: boolean; rdOauth?: boolean }> = [
   {
     value: 'META_ADS',
     label: 'Meta Ads',
     icon: '📊',
-    fields: [
-      { key: 'accessToken', label: 'Access Token', placeholder: 'EAAx...', type: 'password' },
-      { key: 'adAccountId', label: 'Ad Account ID', placeholder: 'act_1088579197977036', type: 'text' },
-    ],
+    fields: [],
+    metaOauth: true,
     guide: {
-      title: 'Como obter credenciais do Meta Ads',
+      title: 'Conectar Meta Ads via OAuth',
       steps: [
-        'No developers.facebook.com, abra seu app (ex.: Trax). A tela Configurações > Básico mostra o ID do app e a Chave Secreta — isso NÃO é o token que você cola aqui.',
-        'No menu lateral, em Produtos, adicione o produto Marketing API ao app (obrigatório para ler dados de anúncios).',
-        'Vá em Ferramentas > Explorador da API do Graph. Selecione seu app, clique em Gerar token de acesso e marque ads_read (leitura). Autorize com a conta Facebook que administra a conta de anúncios.',
-        'Copie o token gerado (começa com EAA…) e cole no campo Access Token abaixo.',
-        'Ad Account ID: abra o Gerenciador de Anúncios. Na URL aparece act=NUMERO — use act_NUMERO (ex.: act_250138776254796). Cole também no campo Ad Account ID; o campo "ID externo" é opcional e pode repetir o mesmo valor.',
-        'Em modo Desenvolvimento o app só acessa contas de anúncios das pessoas com função no app (Administrador/Desenvolvedor). Para produção, use token de System User no Business Manager.',
+        'Clique em "Conectar com Meta" para autorizar o acesso com sua conta Facebook.',
+        'Selecione a conta de anúncios (Ad Account) que deseja vincular a este cliente.',
+        'O token é salvo de forma segura e renovado automaticamente (válido por 60 dias).',
+        'Para produção, recomendamos usar um System User no Business Manager para tokens permanentes.',
       ],
       links: [
-        { label: 'Seu app no Meta', url: 'https://developers.facebook.com/apps/' },
-        { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
+        { label: 'Business Manager', url: 'https://business.facebook.com/' },
         { label: 'Gerenciador de Anúncios', url: 'https://adsmanager.facebook.com/' },
-        { label: 'Business Manager (System User)', url: 'https://business.facebook.com/settings/system-users' },
       ],
-    }
+    },
   },
   {
     value: 'INSTAGRAM',
     label: 'Instagram',
     icon: '📸',
-    fields: [
-      { key: 'accessToken', label: 'Access Token', placeholder: 'EAAx...', type: 'password' },
-      { key: 'igUserId', label: 'Instagram Business Account ID', placeholder: '17841400...', type: 'text' },
-    ],
+    fields: [],
+    metaOauth: true,
     guide: {
-      title: 'Como obter credenciais do Instagram',
+      title: 'Conectar Instagram via OAuth Meta',
       steps: [
         'A conta Instagram precisa ser Profissional (Comercial ou Criador) e vinculada a uma Página do Facebook.',
-        'No app Meta, adicione os produtos Facebook Login e Instagram (se ainda não estiverem).',
-        'No Graph API Explorer (Ferramentas), gere um token com instagram_basic, instagram_manage_insights e pages_show_list.',
-        'No Explorer, teste GET /me/accounts e depois GET /{page-id}?fields=instagram_business_account para obter o Instagram Business Account ID (número longo, ex.: 17841400…).',
-        'Cole o mesmo token no Access Token e o ID obtido no campo Instagram Business Account ID.',
+        'Clique em "Conectar com Meta" — o mesmo token do Meta dá acesso ao Instagram Business.',
+        'Após autorizar, selecione a Página do Facebook vinculada à conta Instagram.',
       ],
       links: [
-        { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
+        { label: 'Meta Business Suite', url: 'https://business.facebook.com/' },
       ],
-    }
+    },
   },
   {
     value: 'FACEBOOK_PAGE',
     label: 'Facebook Page',
     icon: '📘',
-    fields: [
-      { key: 'accessToken', label: 'Page Access Token', placeholder: 'EAAx...', type: 'password' },
-      { key: 'pageId', label: 'Page ID', placeholder: '102345678...', type: 'text' },
-    ],
+    fields: [],
+    metaOauth: true,
     guide: {
-      title: 'Como obter credenciais da Facebook Page',
+      title: 'Conectar Facebook Page via OAuth Meta',
       steps: [
-        'Use o mesmo app no Meta for Developers. O token NÃO vem da tela Básico — gere no Graph API Explorer.',
-        'No Explorer, permissões: pages_show_list, pages_read_engagement, read_insights.',
-        'GET /me/accounts lista suas páginas; cada item tem id (Page ID) e access_token (Page Access Token). Use o access_token da página desejada no campo Page Access Token.',
-        'O Page ID é o id numérico da página na resposta (ou em Sobre > Transparência da página no Facebook).',
+        'Clique em "Conectar com Meta" para autorizar.',
+        'Selecione a Página do Facebook que deseja monitorar.',
+        'Métricas de engajamento, alcance e posts serão sincronizadas automaticamente.',
       ],
       links: [
         { label: 'Graph API Explorer', url: 'https://developers.facebook.com/tools/explorer/' },
@@ -100,6 +87,24 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
         'Gere ou copie o seu "Token de API". A "Base URL" costuma ser https://app.nectarcrm.com.br.'
       ]
     }
+  },
+  {
+    value: 'RD_STATION' as IntegrationProvider,
+    label: 'RD Station',
+    icon: '🚀',
+    fields: [],
+    rdOauth: true,
+    guide: {
+      title: 'Conectar RD Station via OAuth',
+      steps: [
+        'Clique em "Conectar com RD Station" para autorizar o acesso à sua conta.',
+        'Faça login na sua conta RD Station Marketing e autorize o aplicativo Trax.',
+        'Leads, conversões e métricas serão sincronizados automaticamente.',
+      ],
+      links: [
+        { label: 'RD Station Marketing', url: 'https://app.rdstation.com.br/' },
+      ],
+    },
   },
   {
     value: 'GOOGLE_ADS',
@@ -146,12 +151,16 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
   const [loading, setLoading] = useState(false)
   const api = useApiClient()
 
+  function getReturnUrl() {
+    return typeof window !== 'undefined'
+      ? `${window.location.origin}/clients/${clientId}/integrations`
+      : undefined
+  }
+
   async function handleGoogleConnect() {
     setConnectingOAuth(true)
     try {
-      const returnUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/clients/${clientId}/integrations`
-        : undefined
+      const returnUrl = getReturnUrl()
       const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
       const { url } = await api.get<{ url: string }>(
         `/clients/${clientId}/integrations/google-ads/connect${params}`,
@@ -159,6 +168,37 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
       window.location.href = url
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Erro ao iniciar OAuth')
+      setConnectingOAuth(false)
+    }
+  }
+
+  async function handleMetaConnect() {
+    setConnectingOAuth(true)
+    try {
+      const returnUrl = getReturnUrl()
+      const params = new URLSearchParams({ scopeGroup: 'all' })
+      if (returnUrl) params.set('returnUrl', returnUrl)
+      const { url } = await api.get<{ url: string }>(
+        `/clients/${clientId}/integrations/meta/connect?${params.toString()}`,
+      )
+      window.location.href = url
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao iniciar OAuth Meta')
+      setConnectingOAuth(false)
+    }
+  }
+
+  async function handleRdStationConnect() {
+    setConnectingOAuth(true)
+    try {
+      const returnUrl = getReturnUrl()
+      const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
+      const { url } = await api.get<{ url: string }>(
+        `/clients/${clientId}/integrations/rd-station/connect${params}`,
+      )
+      window.location.href = url
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao iniciar OAuth RD Station')
       setConnectingOAuth(false)
     }
   }
@@ -181,7 +221,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedProvider) return
-    if (selectedProvider.oauth) return
+    if (selectedProvider.oauth || selectedProvider.metaOauth || selectedProvider.rdOauth) return
     setLoading(true)
     try {
       const credentials: Record<string, string> = {}
@@ -313,6 +353,40 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
                       {connectingOAuth ? 'Redirecionando…' : 'Conectar com Google'}
                     </button>
                   </div>
+                ) : selectedProvider.metaOauth ? (
+                  <div className="py-4">
+                    <button
+                      type="button"
+                      onClick={handleMetaConnect}
+                      disabled={connectingOAuth}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-all disabled:opacity-60"
+                      style={{ background: '#1877F2', color: '#fff' }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden>
+                        <path d="M24 12.073C24 5.404 18.627 0 12 0S0 5.404 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+                      </svg>
+                      {connectingOAuth ? 'Redirecionando…' : 'Conectar com Meta'}
+                    </button>
+                    <p className="text-xs text-[var(--color-muted-foreground)] text-center mt-2">
+                      Após autorizar, você escolherá qual conta conectar (Ads, Instagram ou Facebook Page).
+                    </p>
+                  </div>
+                ) : selectedProvider.rdOauth ? (
+                  <div className="py-4">
+                    <button
+                      type="button"
+                      onClick={handleRdStationConnect}
+                      disabled={connectingOAuth}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-all disabled:opacity-60"
+                      style={{ background: '#00A0E3', color: '#fff' }}
+                    >
+                      <span className="text-lg leading-none">🚀</span>
+                      {connectingOAuth ? 'Redirecionando…' : 'Conectar com RD Station'}
+                    </button>
+                    <p className="text-xs text-[var(--color-muted-foreground)] text-center mt-2">
+                      Você será redirecionado para autorizar o Trax na sua conta RD Station.
+                    </p>
+                  </div>
                 ) : selectedProvider.fields.map((field) => (
                   <div key={field.key}>
                     <label className="block text-xs font-medium text-[var(--color-muted-foreground)] mb-1.5 uppercase tracking-wide">
@@ -351,7 +425,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
                       Cancelar
                     </button>
                   </Dialog.Close>
-                  {!selectedProvider.oauth && (
+                  {!selectedProvider.oauth && !selectedProvider.metaOauth && !selectedProvider.rdOauth && (
                     <button
                       type="submit"
                       disabled={loading}

@@ -6,6 +6,23 @@ import { EmailService } from '../../../email/application/services/email.service'
 import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 import * as bcrypt from 'bcryptjs';
 
+/** Normaliza telefone BR para armazenamento (+55 + 10 ou 11 dígitos) */
+function normalizeBrazilPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  const local = digits.startsWith('55') && digits.length >= 12
+    ? digits.slice(2)
+    : digits
+  if (local.length < 10 || local.length > 11) {
+    throw new BadRequestException('Telefone inválido')
+  }
+  return `+55${local}`
+}
+
+export const RESERVED_SLUGS = [
+  'www', 'api', 'admin', 'app', 'static', 'assets',
+  'mail', 'smtp', 'ftp', 'cdn', 'media', 'trax',
+] as const;
+
 @Injectable()
 export class CreateAgencyUseCase {
   constructor(
@@ -16,10 +33,8 @@ export class CreateAgencyUseCase {
 
   async execute(dto: CreateAgencyDto) {
     const slug = dto.slug.toLowerCase();
-    
-    // Validate slug
-    const reservedSlugs = ['www', 'api', 'admin', 'app', 'static', 'assets', 'trax'];
-    if (reservedSlugs.includes(slug)) {
+
+    if (RESERVED_SLUGS.includes(slug as (typeof RESERVED_SLUGS)[number])) {
       throw new BadRequestException('Slug reservado ou inválido');
     }
 
@@ -28,16 +43,12 @@ export class CreateAgencyUseCase {
       throw new ConflictException('Este slug já está em uso');
     }
 
-    const existingEmail = await this.prisma.user.findFirst({ where: { email: dto.adminEmail } });
-    if (existingEmail) {
-      throw new ConflictException('Este e-mail já está sendo usado por outro usuário');
-    }
-
     // Trial ending in 14 days
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 14);
 
     const passwordHash = await bcrypt.hash(dto.adminPassword, 10);
+    const phone = normalizeBrazilPhone(dto.adminPhone);
 
     const result = await this.prisma.transaction(async (tx) => {
       // Create Agency
@@ -49,6 +60,8 @@ export class CreateAgencyUseCase {
           trialEndsAt,
           maxClients: 2,
           maxUsers: 1,
+          primaryColor: dto.primaryColor ?? '#6366F1',
+          themeMode: dto.themeMode ?? 'dark',
         },
       });
 
@@ -58,6 +71,7 @@ export class CreateAgencyUseCase {
           agencyId: agency.id,
           name: dto.adminName,
           email: dto.adminEmail,
+          phone,
           passwordHash,
           role: 'AGENCY_ADMIN',
           isActive: true,
@@ -87,6 +101,7 @@ export class CreateAgencyUseCase {
         id: result.agency.id,
         name: result.agency.name,
         slug: result.agency.slug,
+        primaryColor: result.agency.primaryColor,
       },
       message: 'Agência e administrador criados com sucesso',
     };

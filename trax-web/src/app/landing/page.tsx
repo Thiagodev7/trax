@@ -187,72 +187,113 @@ function Hero() {
           transition={{ duration: 0.9, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mt-20 relative"
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent z-10 pointer-events-none rounded-2xl" />
-          <div className="bg-[#111118] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60">
-            {/* Fake browser bar */}
+          {/* Glow behind the preview */}
+          <div className="absolute -inset-px bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-purple-500/20 rounded-2xl blur-sm" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/20 to-transparent z-10 pointer-events-none rounded-2xl" />
+          
+          <div className="relative bg-[#111118] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60">
+            {/* Browser chrome */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 bg-[#0d0d14]">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-500/50" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
                 <div className="w-3 h-3 rounded-full bg-green-500/50" />
               </div>
-              <div className="flex-1 mx-3 bg-white/5 rounded-md px-3 py-1 text-xs text-white/30 text-center">
-                {EXAMPLE_TENANT_HOST}
+              <div className="flex-1 mx-3 bg-white/5 rounded-md px-3 py-1 text-xs text-white/30 text-center font-mono">
+                🔒 {EXAMPLE_TENANT_HOST}
+              </div>
+              <div className="flex gap-2">
+                <div className="w-4 h-4 rounded bg-white/5" />
+                <div className="w-4 h-4 rounded bg-white/5" />
               </div>
             </div>
 
-            {/* Fake dashboard content */}
-            <div className="p-6 grid grid-cols-4 gap-4">
-              {[
-                { label: 'Leads gerados', value: '1.847', change: '+24%', color: 'indigo' },
-                { label: 'Investimento', value: 'R$ 12.400', change: '-3%', color: 'violet' },
-                { label: 'CPL médio', value: 'R$ 6,71', change: '+8%', color: 'purple' },
-                { label: 'ROAS', value: '4.2x', change: '+31%', color: 'blue' },
-              ].map((kpi) => (
-                <div
-                  key={kpi.label}
-                  className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4"
-                >
-                  <p className="text-xs text-white/40 mb-2">{kpi.label}</p>
-                  <p className="text-2xl font-bold text-white">{kpi.value}</p>
-                  <p
-                    className={`text-xs mt-1 ${kpi.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}
-                  >
-                    {kpi.change} vs mês anterior
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="px-6 pb-6 grid grid-cols-3 gap-4">
-              <div className="col-span-2 bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 h-32 flex items-end gap-1 overflow-hidden">
-                {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 100, 80, 88].map((h, i) => (
+            <div className="flex">
+              {/* Sidebar preview */}
+              <div className="hidden sm:flex flex-col gap-1 w-14 bg-[#0d0d14] border-r border-white/5 p-2 py-4">
+                {[...Array(6)].map((_, i) => (
                   <div
                     key={i}
-                    className="flex-1 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-sm opacity-80"
-                    style={{ height: `${h}%` }}
-                  />
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${i === 0 ? 'bg-indigo-600/30 border border-indigo-500/30' : 'bg-white/[0.03]'}`}
+                  >
+                    <div className={`w-4 h-4 rounded-sm ${i === 0 ? 'bg-indigo-400/80' : 'bg-white/15'}`} />
+                  </div>
                 ))}
               </div>
-              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 h-32 flex flex-col justify-between">
-                <p className="text-xs text-white/40">Meta Ads</p>
-                <div className="space-y-2">
+
+              <div className="flex-1 p-5">
+                {/* Agency header row */}
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <p className="text-[11px] text-white/30 font-medium uppercase tracking-widest mb-1">Dashboard</p>
+                    <p className="text-white/60 text-xs">Período: novembro 2024</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600" />
+                    <div className="w-16 h-2.5 bg-white/10 rounded-full" />
+                  </div>
+                </div>
+
+                {/* KPI grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   {[
-                    { label: 'Impressões', w: '75%' },
-                    { label: 'Cliques', w: '45%' },
-                    { label: 'Conversões', w: '30%' },
-                  ].map((bar) => (
-                    <div key={bar.label}>
-                      <div className="flex justify-between text-[10px] text-white/30 mb-0.5">
-                        <span>{bar.label}</span>
-                      </div>
-                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-500 rounded-full"
-                          style={{ width: bar.w }}
-                        />
-                      </div>
+                    { label: 'Leads', value: '1.847', change: '+24%', up: true, color: 'indigo' },
+                    { label: 'Investimento', value: 'R$\u00a012.4k', change: '-3%', up: false, color: 'violet' },
+                    { label: 'CPL médio', value: 'R$\u00a06,71', change: '+8%', up: true, color: 'purple' },
+                    { label: 'ROAS', value: '4.2×', change: '+31%', up: true, color: 'blue' },
+                  ].map((kpi) => (
+                    <div
+                      key={kpi.label}
+                      className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5"
+                    >
+                      <p className="text-[10px] text-white/35 mb-1.5 uppercase tracking-wide">{kpi.label}</p>
+                      <p className="text-xl font-bold text-white leading-none mb-1">{kpi.value}</p>
+                      <p className={`text-[10px] font-semibold ${kpi.up ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {kpi.change} vs mês anterior
+                      </p>
                     </div>
                   ))}
+                </div>
+
+                {/* Chart area */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 h-28">
+                    <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wide">Evolução de leads</p>
+                    <div className="flex items-end gap-0.5 h-16 overflow-hidden">
+                      {[30, 55, 40, 70, 50, 85, 65, 80, 58, 90, 72, 100, 82, 95].map((h, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-sm"
+                          style={{
+                            height: `${h}%`,
+                            background: `linear-gradient(to top, rgba(99,102,241,0.9), rgba(139,92,246,0.5))`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 h-28 flex flex-col justify-between">
+                    <p className="text-[10px] text-white/30 uppercase tracking-wide">Meta Ads</p>
+                    <div className="space-y-1.5">
+                      {[
+                        { label: 'Impressões', w: '75%' },
+                        { label: 'Cliques', w: '45%' },
+                        { label: 'Conversões', w: '28%' },
+                      ].map((bar) => (
+                        <div key={bar.label}>
+                          <div className="flex justify-between text-[9px] text-white/25 mb-0.5">
+                            <span>{bar.label}</span>
+                          </div>
+                          <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
+                              style={{ width: bar.w }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -266,26 +307,47 @@ function Hero() {
 // ──────────────────────────────────────────────────────────────────────────────
 // Logos / Social proof
 // ──────────────────────────────────────────────────────────────────────────────
+const integrationBadges = [
+  { name: 'Meta Ads', color: 'from-blue-500 to-blue-600', icon: '⬡' },
+  { name: 'Google Ads', color: 'from-red-500 to-orange-500', icon: 'G' },
+  { name: 'Google Analytics', color: 'from-orange-500 to-yellow-500', icon: 'GA' },
+  { name: 'LinkedIn Ads', color: 'from-sky-600 to-blue-700', icon: 'in' },
+  { name: 'TikTok Ads', color: 'from-pink-500 to-rose-600', icon: '♪' },
+  { name: 'Nectar CRM', color: 'from-violet-500 to-purple-600', icon: 'N' },
+]
+
 function SocialProof() {
-  const integrations = [
-    'Meta Ads',
-    'Google Ads',
-    'Google Analytics',
-    'LinkedIn Ads',
-    'TikTok Ads',
-    'Nectar CRM',
-  ]
   return (
-    <section className="bg-[#0d0d14] border-y border-white/5 py-12">
+    <section className="bg-[#0d0d14] border-y border-white/5 py-14">
       <div className="max-w-7xl mx-auto px-6">
-        <p className="text-center text-xs font-semibold uppercase tracking-widest text-white/30 mb-8">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-white/30 mb-10">
           Integrado com as plataformas que você já usa
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-          {integrations.map((name) => (
-            <span key={name} className="text-sm font-semibold text-white/25">
-              {name}
-            </span>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {integrationBadges.map((badge) => (
+            <div
+              key={badge.name}
+              className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.08] hover:border-white/15 hover:bg-white/[0.07] rounded-xl px-4 py-2.5 transition-all cursor-default"
+            >
+              <div
+                className={`w-6 h-6 rounded-md bg-gradient-to-br ${badge.color} flex items-center justify-center text-white text-[10px] font-black shrink-0`}
+              >
+                {badge.icon}
+              </div>
+              <span className="text-sm font-medium text-white/50">{badge.name}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-10 flex items-center justify-center gap-8 text-sm text-white/25">
+          {[
+            { value: '500+', label: 'Agências cadastradas' },
+            { value: '12k+', label: 'Relatórios publicados' },
+            { value: '98%', label: 'Satisfação dos clientes' },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <p className="text-2xl font-black text-white/60">{stat.value}</p>
+              <p className="text-xs text-white/30 mt-0.5">{stat.label}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -477,21 +539,25 @@ function HowItWorks() {
 const plans = [
   {
     name: 'Starter',
-    price: null,
+    price: 'R$\u00a0197',
+    period: '/mês',
     desc: 'Para agências começando a escalar a entrega de resultados.',
     features: [
       'Até 5 clientes',
       '2 usuários na equipe',
       'Integrações Meta + Google Ads',
-      'Dashboard por cliente',
+      'Dashboard white-label por cliente',
       'Suporte via e-mail',
+      'Trial de 14 dias grátis',
     ],
-    cta: 'Começar trial',
+    cta: 'Começar trial grátis',
     highlight: false,
+    badge: null,
   },
   {
     name: 'Pro',
-    price: null,
+    price: 'R$\u00a0497',
+    period: '/mês',
     desc: 'Para agências em crescimento que querem entregar mais com menos esforço.',
     features: [
       'Clientes ilimitados',
@@ -500,13 +566,16 @@ const plans = [
       'White-label completo (domínio próprio)',
       'Relatórios agendados',
       'Suporte prioritário',
+      'Trial de 14 dias grátis',
     ],
     cta: 'Começar trial Pro',
     highlight: true,
+    badge: 'Mais popular',
   },
   {
     name: 'Agency',
-    price: null,
+    price: 'R$\u00a0997',
+    period: '/mês',
     desc: 'Para grandes agências e grupos com múltiplos times.',
     features: [
       'Tudo do Pro',
@@ -518,6 +587,7 @@ const plans = [
     ],
     cta: 'Falar com vendas',
     highlight: false,
+    badge: null,
   },
 ]
 
@@ -537,11 +607,10 @@ function Pricing() {
             Planos
           </motion.div>
           <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-black text-white mb-5 tracking-tight">
-            Preços em breve
+            Preços simples e transparentes
           </motion.h2>
           <motion.p variants={fadeUp} className="text-white/50 max-w-lg mx-auto text-lg">
-            Estamos finalizando nossa estrutura de planos. Cadastre-se agora e garanta
-            condições especiais de lançamento.
+            Todos os planos incluem 14 dias de trial gratuito. Sem cartão de crédito.
           </motion.p>
         </motion.div>
 
@@ -558,19 +627,20 @@ function Pricing() {
               variants={fadeUp}
               className={`relative rounded-2xl p-8 border transition-all ${
                 plan.highlight
-                  ? 'bg-indigo-600/10 border-indigo-500/50 shadow-xl shadow-indigo-500/10'
-                  : 'bg-white/[0.03] border-white/[0.08]'
+                  ? 'bg-indigo-600/10 border-indigo-500/50 shadow-2xl shadow-indigo-500/15 scale-[1.02]'
+                  : 'bg-white/[0.03] border-white/[0.08] hover:border-white/15'
               }`}
             >
-              {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg shadow-indigo-500/40">
-                  Mais popular
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg shadow-indigo-500/40 whitespace-nowrap">
+                  {plan.badge}
                 </div>
               )}
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                <h3 className="text-sm font-semibold text-white/50 uppercase tracking-widest mb-3">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-3xl font-black text-white/30">Em breve</span>
+                  <span className="text-4xl font-black text-white">{plan.price}</span>
+                  <span className="text-sm text-white/40 font-medium">{plan.period}</span>
                 </div>
                 <p className="text-sm text-white/45 leading-relaxed">{plan.desc}</p>
               </div>
@@ -578,7 +648,7 @@ function Pricing() {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-3 text-sm text-white/60">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <CheckCircle2 className={`w-4 h-4 shrink-0 ${plan.highlight ? 'text-indigo-400' : 'text-emerald-400'}`} />
                     {f}
                   </li>
                 ))}
@@ -598,6 +668,16 @@ function Pricing() {
             </motion.div>
           ))}
         </motion.div>
+
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="text-center text-xs text-white/25 mt-8"
+        >
+          Preços em BRL. Cobrado mensalmente. Cancele quando quiser.
+        </motion.p>
       </div>
     </section>
   )

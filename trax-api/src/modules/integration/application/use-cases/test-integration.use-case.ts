@@ -7,6 +7,7 @@ import { GoogleAdsService } from '../services/google-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
+import { RdStationService } from '../services/rd-station.service';
 import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class TestIntegrationUseCase {
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
+    private readonly rdStation: RdStationService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -46,6 +48,9 @@ export class TestIntegrationUseCase {
           break;
         case 'NECTAR_CRM':
           result = await this.nectar.testConnection(creds as any);
+          break;
+        case 'RD_STATION':
+          result = await this.rdStation.testConnection(creds as any);
           break;
         default:
           result = { valid: false };

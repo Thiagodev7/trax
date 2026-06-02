@@ -13,19 +13,17 @@ import {
 } from '@common/config/domains';
 import { PrismaService } from '@/prisma/prisma.service';
 import { tenantStorage } from '@common/context/tenant.context';
+import { RedisService } from '@/redis/redis.service';
 
-// Cache em memória: domínio → { agencyId, agencySlug, expiresAt }
-// Em produção, substituir por Redis (ioredis) para escalar horizontalmente.
 interface CachedTenant {
   agencyId: string;
   agencySlug: string;
-  expiresAt: number;
 }
 
-const tenantCache = new Map<string, CachedTenant>();
-const CACHE_TTL_MS = Number(process.env.TENANT_CACHE_TTL ?? 300) * 1000;
+// Fallback em memória para quando Redis está indisponível
+const memoryFallback = new Map<string, CachedTenant & { expiresAt: number }>();
+const CACHE_TTL_SECONDS = Number(process.env.TENANT_CACHE_TTL ?? 300);
 
-// Rotas que não precisam de resolução de tenant (health check, etc.)
 const PUBLIC_PATHS_SKIP_TENANT = [
   '/api/health',
   '/api/docs',
@@ -34,14 +32,18 @@ const PUBLIC_PATHS_SKIP_TENANT = [
   '/api/v1/integrations/google-ads/callback',
 ];
 
+const REDIS_PREFIX = 'tenant:';
+
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
   private readonly logger = new Logger(TenantMiddleware.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    // Pula resolução em rotas públicas de infra
     if (PUBLIC_PATHS_SKIP_TENANT.some((p) => req.path.startsWith(p))) {
       return next();
     }
@@ -69,8 +71,6 @@ export class TenantMiddleware implements NestMiddleware {
       );
     }
 
-    // Injeta o contexto do tenant via AsyncLocalStorage
-    // Qualquer código downstream pode chamar getAgencyId() sem receber o req
     tenantStorage.run(
       { agencyId: tenant.agencyId, agencySlug: tenant.agencySlug },
       () => next(),
@@ -78,31 +78,31 @@ export class TenantMiddleware implements NestMiddleware {
   }
 
   private extractHostname(req: Request): string {
-    // Suporte ao header X-Agency-Domain (enviado pelo Flutter web/Next.js)
     const xDomain = req.headers['x-agency-domain'] as string | undefined;
     if (xDomain) return xDomain.split(':')[0].toLowerCase().trim();
-
-    // Fallback: Host header padrão (sem porta)
     const host = req.hostname || req.headers.host || '';
     return host.split(':')[0].toLowerCase().trim();
   }
 
-  private async resolveTenant(
-    hostname: string,
-  ): Promise<CachedTenant | null> {
-    // 1. Verifica cache
-    const cached = tenantCache.get(hostname);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached;
+  private async resolveTenant(hostname: string): Promise<CachedTenant | null> {
+    // 1. Tenta Redis
+    if (this.redis.isConnected) {
+      const cached = await this.redis.get(`${REDIS_PREFIX}${hostname}`);
+      if (cached) {
+        return JSON.parse(cached) as CachedTenant;
+      }
+    } else {
+      // 2. Fallback em memória
+      const entry = memoryFallback.get(hostname);
+      if (entry && entry.expiresAt > Date.now()) {
+        return { agencyId: entry.agencyId, agencySlug: entry.agencySlug };
+      }
     }
 
+    // 3. Busca no banco
     let slug = extractSlugFromHost(hostname);
+    if (!slug) slug = getDevLocalhostFallbackSlug(hostname);
 
-    if (!slug) {
-      slug = getDevLocalhostFallbackSlug(hostname);
-    }
-
-    // 3. Busca no banco por customDomain ou slug
     const agency = await this.prisma.agency.findFirst({
       where: {
         isActive: true,
@@ -121,24 +121,27 @@ export class TenantMiddleware implements NestMiddleware {
       return null;
     }
 
-    // 4. Popula cache
-    const entry: CachedTenant = {
-      agencyId: agency.id,
-      agencySlug: agency.slug,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    };
-    tenantCache.set(hostname, entry);
+    const entry: CachedTenant = { agencyId: agency.id, agencySlug: agency.slug };
+
+    // 4. Popula cache (Redis ou memória)
+    if (this.redis.isConnected) {
+      await this.redis.set(`${REDIS_PREFIX}${hostname}`, JSON.stringify(entry), CACHE_TTL_SECONDS);
+    } else {
+      memoryFallback.set(hostname, { ...entry, expiresAt: Date.now() + CACHE_TTL_SECONDS * 1000 });
+    }
 
     return entry;
   }
 }
 
-/** Limpa o cache de um domínio específico (usar ao atualizar customDomain da Agency) */
-export function invalidateTenantCache(hostname: string): void {
-  tenantCache.delete(hostname);
+/** Invalida o cache de um domínio específico (usar ao atualizar customDomain da Agency) */
+export function invalidateTenantCache(hostname: string, redis?: RedisService): void {
+  memoryFallback.delete(hostname);
+  redis?.del(`${REDIS_PREFIX}${hostname}`);
 }
 
 /** Limpa todo o cache (usar em testes) */
-export function clearTenantCache(): void {
-  tenantCache.clear();
+export function clearTenantCache(redis?: RedisService): void {
+  memoryFallback.clear();
+  redis?.delPattern(`${REDIS_PREFIX}*`);
 }

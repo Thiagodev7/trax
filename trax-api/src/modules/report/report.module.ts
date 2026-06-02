@@ -6,6 +6,7 @@ import { CreateReportUseCase } from './application/use-cases/create-report.use-c
 import { UpdateReportUseCase } from './application/use-cases/update-report.use-case';
 import { PublishReportUseCase } from './application/use-cases/publish-report.use-case';
 import { DeleteReportUseCase } from './application/use-cases/delete-report.use-case';
+import { ReportAiService } from './application/services/report-ai.service';
 
 @Module({
   controllers: [ReportController],
@@ -16,6 +17,7 @@ import { DeleteReportUseCase } from './application/use-cases/delete-report.use-c
     UpdateReportUseCase,
     PublishReportUseCase,
     DeleteReportUseCase,
+    ReportAiService,
   ],
 })
 export class ReportModule {}

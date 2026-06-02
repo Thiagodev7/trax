@@ -8,6 +8,7 @@ import { GoogleAdsService } from '../services/google-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
+import { RdStationService } from '../services/rd-station.service';
 
 function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0];
@@ -38,6 +39,7 @@ export class SyncIntegrationUseCase {
     private readonly instagram: InstagramService,
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
+    private readonly rdStation: RdStationService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -70,6 +72,9 @@ export class SyncIntegrationUseCase {
           break;
         case 'NECTAR_CRM':
           synced = await this.syncNectar(integration.id, creds as any, startDate, endDate);
+          break;
+        case 'RD_STATION':
+          synced = await this.syncRdStation(integration.id, creds as any, startDate, endDate);
           break;
         default:
           this.logger.warn(`Sync not implemented for provider: ${integration.provider}`);
@@ -286,5 +291,24 @@ export class SyncIntegrationUseCase {
     const summary = await this.nectar.fetchLeadboard(creds);
     await this.upsertMetric(integrationId, toDateStr(new Date()), 'crm', 'summary', 'CRM Summary', summary);
     return 1;
+  }
+
+  private async syncRdStation(
+    integrationId: string,
+    creds: { accessToken: string; refreshToken: string },
+    startDate: string,
+    endDate: string,
+  ): Promise<number> {
+    const { metrics } = await this.rdStation.syncLeads(creds, startDate, endDate);
+    let count = 0;
+    for (const [day, data] of Object.entries(metrics)) {
+      await this.upsertMetric(integrationId, day, 'rd_leads', 'summary', 'RD Station Leads', data as Record<string, unknown>);
+      count++;
+    }
+    if (count === 0) {
+      await this.upsertMetric(integrationId, toDateStr(new Date()), 'rd_leads', 'summary', 'RD Station Leads', { leads: 0 });
+      count = 1;
+    }
+    return count;
   }
 }

@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -24,6 +25,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -31,6 +33,17 @@ import { join } from 'path';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        APP_PORT: Joi.number().default(3000),
+        DATABASE_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        // Aceita CREDENTIALS_ENCRYPTION_KEY ou ENCRYPTION_KEY (um dos dois é obrigatório)
+        CREDENTIALS_ENCRYPTION_KEY: Joi.string().optional(),
+        ENCRYPTION_KEY: Joi.string().optional(),
+        GEMINI_API_KEY: Joi.string().optional(),
+        REDIS_URL: Joi.string().uri().optional(),
+      }),
     }),
 
     // --- Rate Limiting global ---
@@ -44,6 +57,7 @@ import { join } from 'path';
 
     // --- Infraestrutura ---
     PrismaModule,
+    RedisModule,
     ScheduleModule.forRoot(),
 
     // --- Domínio ---

@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, MinLength, MaxLength, Matches, IsOptional, IsIn } from 'class-validator';
 
 export class CreateAgencyDto {
   @IsString()
@@ -26,4 +26,20 @@ export class CreateAgencyDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres' })
   adminPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^(\+55)?\d{10,11}$/, {
+    message: 'Informe um telefone brasileiro válido (DDD + número)',
+  })
+  adminPhone: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'Cor deve ser um hex válido (#RRGGBB)' })
+  primaryColor?: string;
+
+  @IsOptional()
+  @IsIn(['light', 'dark'], { message: 'Tema deve ser light ou dark' })
+  themeMode?: 'light' | 'dark';
 }

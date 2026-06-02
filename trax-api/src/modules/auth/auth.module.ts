@@ -10,6 +10,12 @@ import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { GetMeUseCase } from './application/use-cases/get-me.use-case';
 import { UpdatePasswordUseCase } from './application/use-cases/update-password.use-case';
 import { UpdateNotificationPreferencesUseCase } from './application/use-cases/update-notification-preferences.use-case';
+import {
+  SetupTotpUseCase,
+  EnableTotpUseCase,
+  DisableTotpUseCase,
+  VerifyTotpLoginUseCase,
+} from './application/use-cases/totp.use-case';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { TenantAuthGuard } from '@common/guards/tenant-auth.guard';
 
@@ -34,6 +40,10 @@ import { TenantAuthGuard } from '@common/guards/tenant-auth.guard';
     GetMeUseCase,
     UpdatePasswordUseCase,
     UpdateNotificationPreferencesUseCase,
+    SetupTotpUseCase,
+    EnableTotpUseCase,
+    DisableTotpUseCase,
+    VerifyTotpLoginUseCase,
     JwtStrategy,
     // TenantAuthGuard aplicado globalmente a partir do AuthModule
     {

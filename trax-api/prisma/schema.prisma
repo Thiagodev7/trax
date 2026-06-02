@@ -40,6 +40,7 @@ enum IntegrationProvider {
   INSTAGRAM
   FACEBOOK_PAGE
   NECTAR_CRM
+  RD_STATION
   CUSTOM
 }
 
@@ -72,6 +73,7 @@ enum AuditAction {
   SYNC
   TEST
   INVITE
+  OAUTH_CONNECT
 }
 
 enum AuditEntityType {
@@ -167,6 +169,7 @@ model User {
   email           String    @db.VarChar(255)
   passwordHash    String    @db.VarChar(255)
   name            String    @db.VarChar(255)
+  phone           String?   @db.VarChar(20)
   role            UserRole  @default(CLIENT_VIEWER)
   avatarUrl       String?   @db.VarChar(1024)
   isActive        Boolean   @default(true)
@@ -177,6 +180,10 @@ model User {
   notifyIntegrationErrors Boolean @default(true) @map("notify_integration_errors")
   notifyNewClient         Boolean @default(false) @map("notify_new_client")
   notifyWeeklySummary     Boolean @default(true) @map("notify_weekly_summary")
+  // 2FA TOTP
+  totpSecret      String?   @db.VarChar(64) @map("totp_secret")
+  totpEnabled     Boolean   @default(false) @map("totp_enabled")
+  totpEnabledAt   DateTime? @map("totp_enabled_at")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -303,6 +310,10 @@ model Report {
   layoutJson     Json? // Configuração dos blocos/widgets do relatório (legado)
   // { enabledTabs: ["META_ADS","ORGANIC","CALENDAR","KPI"], defaultTab: "META_ADS" }
   moduleConfig   Json?
+  // IA Gemini — sumário narrativo e insights gerados após publicação
+  aiSummary      String?      @db.Text @map("ai_summary")
+  aiInsights     Json?        @map("ai_insights")
+  aiGeneratedAt  DateTime?    @map("ai_generated_at")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   publishedAt    DateTime?

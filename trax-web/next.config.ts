@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { env } from './src/env'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -27,7 +28,7 @@ const nextConfig: NextConfig = {
   // Proxy same-origin: browser chama /api/v1 no subdomínio da agência
   // e o Next encaminha para o trax-api (evita CORS e TLS cross-domain).
   async rewrites() {
-    const apiOrigin = process.env.API_URL ?? 'http://localhost:3000'
+    const apiOrigin = env.API_URL
     return [
       {
         source: '/api/v1/:path*',

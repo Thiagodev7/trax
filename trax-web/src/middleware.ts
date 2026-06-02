@@ -67,6 +67,8 @@ export default auth((req) => {
   // ── Landing page: domínio raiz (traxsolucoes.com.br / localhost) ──
   if (isRootDomain) {
     if (pathname.startsWith('/landing')) return NextResponse.next()
+    // Cadastro self-service vive em /signup (não em /landing/signup)
+    if (pathname === '/signup') return NextResponse.next()
     const rewriteUrl = new URL(`/landing${pathname === '/' ? '' : pathname}`, req.url)
     return NextResponse.rewrite(rewriteUrl)
   }

@@ -1,9 +1,9 @@
 import {
   Injectable,
   BadRequestException,
-  NotFoundException,
   ForbiddenException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { AuditAction, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -14,10 +14,23 @@ import { AuditLogService } from '@modules/audit-log/application/services/audit-l
 
 @Injectable()
 export class ConnectGoogleAdsUseCase {
-  constructor(private readonly oauth: GoogleAdsOAuthService) {}
+  constructor(
+    private readonly oauth: GoogleAdsOAuthService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   execute(agencyId: string, clientId: string, returnUrl?: string): { url: string } {
     const url = this.oauth.buildConnectUrl(agencyId, clientId, returnUrl);
+    // Registra início do fluxo OAuth (fire-and-forget)
+    this.auditLog.record({
+      agencyId,
+      action: AuditAction.OAUTH_CONNECT,
+      entityType: AuditEntityType.INTEGRATION,
+      entityId: clientId,
+      entityName: 'Google Ads',
+      description: 'Fluxo OAuth Google Ads iniciado',
+      metadata: { clientId, provider: 'GOOGLE_ADS', step: 'start' },
+    });
     return { url };
   }
 }
@@ -34,7 +47,7 @@ export class ListGoogleAdsCustomersUseCase {
     clientId: string,
     pendingId: string,
   ): Promise<Array<{ id: string; formatted: string }>> {
-    const pending = this.oauth.getPending(pendingId);
+    const pending = await this.oauth.getPending(pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
     if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
@@ -59,7 +72,7 @@ export class FinalizeGoogleAdsOAuthUseCase {
     customerId: string,
     displayName?: string,
   ) {
-    const pending = this.oauth.consumePending(pendingId);
+    const pending = await this.oauth.consumePending(pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
     if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
@@ -157,10 +170,30 @@ export class FinalizeGoogleAdsOAuthUseCase {
 
 @Injectable()
 export class GoogleAdsOAuthCallbackUseCase {
-  constructor(private readonly oauth: GoogleAdsOAuthService) {}
+  private readonly logger = new Logger(GoogleAdsOAuthCallbackUseCase.name);
+
+  constructor(
+    private readonly oauth: GoogleAdsOAuthService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async execute(code: string | undefined, state: string | undefined, error?: string): Promise<string> {
     if (error) {
+      // Registra falha OAuth se conseguirmos extrair o agencyId do state
+      if (state) {
+        try {
+          const payload = this.oauth.verifyState(state);
+          this.auditLog.record({
+            agencyId: payload.agencyId,
+            action: AuditAction.OAUTH_CONNECT,
+            entityType: AuditEntityType.INTEGRATION,
+            entityId: payload.clientId,
+            entityName: 'Google Ads',
+            description: `OAuth Google Ads recusado pelo usuário ou erro: ${error}`,
+            metadata: { provider: 'GOOGLE_ADS', step: 'failed', error },
+          });
+        } catch { /* state inválido, não há contexto para logar */ }
+      }
       const base = this.oauth.getWebAppUrl();
       return `${base}/integrations?google_oauth=error&message=${encodeURIComponent(error)}`;
     }
@@ -168,6 +201,21 @@ export class GoogleAdsOAuthCallbackUseCase {
       throw new BadRequestException('Parâmetros OAuth ausentes.');
     }
     const { redirectUrl } = await this.oauth.handleCallback(code, state);
+
+    // Registra callback recebido com sucesso
+    try {
+      const payload = this.oauth.verifyState(state);
+      this.auditLog.record({
+        agencyId: payload.agencyId,
+        action: AuditAction.OAUTH_CONNECT,
+        entityType: AuditEntityType.INTEGRATION,
+        entityId: payload.clientId,
+        entityName: 'Google Ads',
+        description: 'Token OAuth Google Ads recebido — aguardando seleção de conta',
+        metadata: { provider: 'GOOGLE_ADS', step: 'callback_received' },
+      });
+    } catch { /* não bloqueia o redirect */ }
+
     return redirectUrl;
   }
 }

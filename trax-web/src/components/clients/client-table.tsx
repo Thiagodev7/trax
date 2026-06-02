@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreHorizontal, ExternalLink, Activity, Pencil, Trash2, Eye, Plug } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, ExternalLink, Activity, Pencil, Trash2, Eye, Plug, Users } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { formatNumber } from '@/lib/utils'
@@ -125,30 +125,68 @@ export function ClientTable({ initialClients = [] }: ClientTableProps) {
             <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center">
-                        <Eye className="w-6 h-6 text-[var(--color-muted)]" />
+                  <td colSpan={4} className="px-6 py-12 text-center">
+                    {search ? (
+                      <div className="flex flex-col items-center gap-3 animate-fade-in">
+                        <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center">
+                          <Search className="w-6 h-6 text-[var(--color-muted)]" />
+                        </div>
+                        <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado para "{search}"</p>
+                        <p className="text-sm text-[var(--color-muted-foreground)]">Tente uma busca diferente</p>
+                        <button
+                          onClick={() => setSearch('')}
+                          className="mt-1 text-[var(--color-primary)] text-sm font-medium hover:underline"
+                        >
+                          Limpar busca
+                        </button>
                       </div>
-                      {search ? (
-                        <>
-                          <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado para "{search}"</p>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">Tente outra busca</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-medium text-[var(--color-foreground)]">Nenhum cliente ainda</p>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">Cadastre seu primeiro cliente para começar a gerar relatórios</p>
-                          <Link
-                            href="/clients/new"
-                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 transition-all"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Cadastrar Primeiro Cliente
-                          </Link>
-                        </>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-6 py-4 max-w-lg mx-auto animate-fade-in">
+                        {/* Icon */}
+                        <div className="relative">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-secondary)]/20 border border-[var(--color-primary)]/20 flex items-center justify-center">
+                            <Users className="w-9 h-9 text-[var(--color-primary)]" />
+                          </div>
+                          <div className="absolute -top-1.5 -right-1.5 w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center shadow-lg">
+                            <Plus className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-center">
+                          <p className="text-lg font-bold text-[var(--color-foreground)]">Adicione seu primeiro cliente</p>
+                          <p className="text-sm text-[var(--color-muted-foreground)] leading-relaxed max-w-sm mx-auto">
+                            Cada cliente terá seus próprios relatórios e integrações de mídia. Comece cadastrando um agora.
+                          </p>
+                        </div>
+
+                        {/* Mini journey cards */}
+                        <div className="grid grid-cols-3 gap-3 w-full">
+                          {[
+                            { step: '01', icon: Users, title: 'Cadastre o cliente', color: 'text-indigo-500 bg-indigo-500/10' },
+                            { step: '02', icon: Plug, title: 'Conecte integrações', color: 'text-violet-500 bg-violet-500/10' },
+                            { step: '03', icon: Activity, title: 'Publique relatórios', color: 'text-emerald-500 bg-emerald-500/10' },
+                          ].map((item) => {
+                            const Icon = item.icon
+                            return (
+                              <div key={item.step} className="flex flex-col items-center gap-2 p-3 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl text-center">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.color}`}>
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <p className="text-xs font-medium text-[var(--color-foreground)] leading-tight">{item.title}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        <Link
+                          href="/clients/new"
+                          className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--color-primary)]/25 glow-primary"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Cadastrar Primeiro Cliente
+                        </Link>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
