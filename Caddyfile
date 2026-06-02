@@ -13,10 +13,12 @@ traxsolucoes.com.br {
 }
 
 admin.traxsolucoes.com.br {
+    tls force_automate
     reverse_proxy web:3001
 }
 
 api.traxsolucoes.com.br {
+    tls force_automate
     reverse_proxy api:3000
 }
 
