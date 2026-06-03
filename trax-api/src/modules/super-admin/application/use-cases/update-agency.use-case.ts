@@ -51,7 +51,7 @@ export class UpdateAgencyUseCase {
         ...(dto.secondaryColor !== undefined && { secondaryColor: dto.secondaryColor }),
         ...(dto.plan !== undefined && { plan: dto.plan }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-        ...(dto.maxClients !== undefined && { maxClients: dto.maxClients }),
+        ...(dto.maxCompanies !== undefined && { maxCompanies: dto.maxCompanies }),
         ...(dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
         ...(dto.trialEndsAt !== undefined && {
           trialEndsAt: dto.trialEndsAt ? new Date(dto.trialEndsAt) : null,

@@ -8,12 +8,12 @@ export interface AgencyListItem {
   slug: string;
   plan: string;
   isActive: boolean;
-  maxClients: number;
+  maxCompanies: number;
   maxUsers: number;
   trialEndsAt: Date | null;
   createdAt: Date;
   _count: {
-    clients: number;
+    companies: number;
     users: number;
     reports: number;
   };
@@ -68,12 +68,12 @@ export class ListAgenciesUseCase {
           slug: true,
           plan: true,
           isActive: true,
-          maxClients: true,
+          maxCompanies: true,
           maxUsers: true,
           trialEndsAt: true,
           createdAt: true,
           _count: {
-            select: { clients: true, users: true, reports: true },
+            select: { companies: true, users: true, reports: true },
           },
         },
       }),

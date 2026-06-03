@@ -23,7 +23,7 @@ interface Report {
   publishedAt: string | null
   createdAt: string
   shareToken: string | null
-  client: {
+  company: {
     id: string
     name: string
     logoUrl: string | null
@@ -79,7 +79,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
     return reports.filter((r) => {
       const matchSearch =
         r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.client.name.toLowerCase().includes(search.toLowerCase())
+        r.company.name.toLowerCase().includes(search.toLowerCase())
       const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
       return matchSearch && matchStatus
     })
@@ -173,7 +173,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
             <thead className="text-xs text-[var(--color-muted-foreground)] uppercase bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
               <tr>
                 <th className="px-6 py-4 font-medium">Relatório</th>
-                <th className="px-6 py-4 font-medium">Cliente</th>
+                <th className="px-6 py-4 font-medium">Empresa</th>
                 <th className="px-6 py-4 font-medium">Período</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
@@ -182,33 +182,62 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
             <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-[var(--color-muted)]" />
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    {search || statusFilter !== 'ALL' ? (
+                      <div className="flex flex-col items-center gap-3 animate-fade-in">
+                        <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center">
+                          <Search className="w-6 h-6 text-[var(--color-muted)]" />
+                        </div>
+                        <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado encontrado</p>
+                        <p className="text-sm text-[var(--color-muted-foreground)]">Tente ajustar seus filtros de busca</p>
+                        <button
+                          onClick={() => { setSearch(''); setStatusFilter('ALL') }}
+                          className="mt-1 text-[var(--color-primary)] text-sm font-medium hover:underline"
+                        >
+                          Limpar filtros
+                        </button>
                       </div>
-                      {search || statusFilter !== 'ALL' ? (
-                        <>
-                          <p className="font-medium text-[var(--color-foreground)]">Nenhum resultado encontrado</p>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">Tente ajustar seus filtros de busca</p>
-                          <button onClick={() => { setSearch(''); setStatusFilter('ALL') }} className="mt-2 text-[var(--color-primary)] text-sm font-medium hover:underline">
-                            Limpar filtros
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-medium text-[var(--color-foreground)]">Nenhum relatório ainda</p>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">Crie o primeiro relatório para compartilhar com seus clientes</p>
-                          <Link
-                            href="/reports/new"
-                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 transition-all"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Criar Primeiro Relatório
-                          </Link>
-                        </>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-6 py-4 max-w-lg mx-auto animate-fade-in">
+                        {/* Icon */}
+                        <div className="relative">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border border-[var(--color-primary)]/20 flex items-center justify-center">
+                            <FileText className="w-9 h-9 text-[var(--color-primary)]" />
+                          </div>
+                          <div className="absolute -top-1.5 -right-1.5 w-7 h-7 bg-[var(--color-accent)] rounded-full flex items-center justify-center shadow-lg">
+                            <Plus className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-center">
+                          <p className="text-lg font-bold text-[var(--color-foreground)]">Crie seu primeiro relatório</p>
+                          <p className="text-sm text-[var(--color-muted-foreground)] leading-relaxed max-w-sm mx-auto">
+                            Monte relatórios profissionais com dados reais e compartilhe com suas empresas com um clique.
+                          </p>
+                        </div>
+
+                        {/* Feature pills */}
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {['Dados de Meta Ads', 'Google Ads', 'Orgânico', 'CRM', 'Compartilhamento público'].map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-foreground-muted)] rounded-full"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+
+                        <Link
+                          href="/reports/new"
+                          className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[var(--color-primary)] rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[var(--color-primary)]/25 glow-primary"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Criar Primeiro Relatório
+                        </Link>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -237,26 +266,26 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
                       </div>
                     </td>
 
-                    {/* Cliente */}
+                    {/* Empresa */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {report.client.logoUrl ? (
+                        {report.company.logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={report.client.logoUrl}
-                            alt={report.client.name}
+                            src={report.company.logoUrl}
+                            alt={report.company.name}
                             className="w-6 h-6 rounded border border-[var(--color-border)]"
                           />
                         ) : (
                           <div className="w-6 h-6 rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] font-bold text-xs">
-                            {report.client.name[0]}
+                            {report.company.name[0]}
                           </div>
                         )}
                         <Link
-                          href={`/reports?clientId=${report.client.id}`}
+                          href={`/reports?companyId=${report.company.id}`}
                           className="text-[var(--color-foreground)] hover:text-[var(--color-primary)] transition-colors"
                         >
-                          {report.client.name}
+                          {report.company.name}
                         </Link>
                       </div>
                     </td>

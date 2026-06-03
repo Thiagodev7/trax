@@ -1,0 +1,145 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import {
+  defaultMetaConfig,
+  MetaConfigShape,
+  MetaConfigSegment,
+  segmentTemplate,
+} from './meta-config.template';
+
+@Injectable()
+export class MetaConfigService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getOrCreate(agencyId: string, companyId: string) {
+    const company = await this.prisma.company.findFirst({ where: { id: companyId, agencyId } });
+    if (!company) throw new NotFoundException('Empresa não encontrada.');
+
+    let cfg = await this.prisma.companyMetaConfig.findUnique({ where: { companyId } });
+    if (!cfg) {
+      const tpl = defaultMetaConfig();
+      cfg = await this.prisma.companyMetaConfig.create({
+        data: {
+          companyId,
+          products: tpl.products as any,
+          states: tpl.states as any,
+          stateBudgetByProduct: tpl.stateBudgetByProduct as any,
+          thresholds: tpl.thresholds as any,
+          reachFactor: tpl.reachFactor,
+          secondaryAccountColor: tpl.secondaryAccountColor,
+          secondaryAccountLabel: tpl.secondaryAccountLabel,
+          sparklineDays: tpl.sparklineDays,
+        },
+      });
+    }
+    return this.serialize(cfg);
+  }
+
+  async update(agencyId: string, companyId: string, patch: Partial<MetaConfigShape>) {
+    const company = await this.prisma.company.findFirst({ where: { id: companyId, agencyId } });
+    if (!company) throw new NotFoundException('Empresa não encontrada.');
+
+    this.validate(patch);
+
+    await this.getOrCreate(agencyId, companyId);
+    const updated = await this.prisma.companyMetaConfig.update({
+      where: { companyId },
+      data: {
+        ...(patch.products !== undefined && { products: patch.products as any }),
+        ...(patch.states !== undefined && { states: patch.states as any }),
+        ...(patch.stateBudgetByProduct !== undefined && {
+          stateBudgetByProduct: patch.stateBudgetByProduct as any,
+        }),
+        ...(patch.thresholds !== undefined && { thresholds: patch.thresholds as any }),
+        ...(patch.reachFactor !== undefined && { reachFactor: patch.reachFactor }),
+        ...(patch.secondaryAccountColor !== undefined && {
+          secondaryAccountColor: patch.secondaryAccountColor,
+        }),
+        ...(patch.secondaryAccountLabel !== undefined && {
+          secondaryAccountLabel: patch.secondaryAccountLabel,
+        }),
+        ...(patch.sparklineDays !== undefined && { sparklineDays: patch.sparklineDays }),
+      },
+    });
+    return this.serialize(updated);
+  }
+
+  async reset(agencyId: string, companyId: string, segment?: MetaConfigSegment) {
+    const company = await this.prisma.company.findFirst({ where: { id: companyId, agencyId } });
+    if (!company) throw new NotFoundException('Empresa não encontrada.');
+
+    const tpl = segment ? segmentTemplate(segment) : defaultMetaConfig();
+    const cfg = await this.prisma.companyMetaConfig.upsert({
+      where: { companyId },
+      update: {
+        products: tpl.products as any,
+        states: tpl.states as any,
+        stateBudgetByProduct: tpl.stateBudgetByProduct as any,
+        thresholds: tpl.thresholds as any,
+        reachFactor: tpl.reachFactor,
+        secondaryAccountColor: tpl.secondaryAccountColor,
+        secondaryAccountLabel: tpl.secondaryAccountLabel,
+        sparklineDays: tpl.sparklineDays,
+      },
+      create: {
+        companyId,
+        products: tpl.products as any,
+        states: tpl.states as any,
+        stateBudgetByProduct: tpl.stateBudgetByProduct as any,
+        thresholds: tpl.thresholds as any,
+        reachFactor: tpl.reachFactor,
+        secondaryAccountColor: tpl.secondaryAccountColor,
+        secondaryAccountLabel: tpl.secondaryAccountLabel,
+        sparklineDays: tpl.sparklineDays,
+      },
+    });
+    return this.serialize(cfg);
+  }
+
+  private validate(patch: Partial<MetaConfigShape>) {
+    if (patch.products) {
+      const keys = new Set<string>();
+      for (const p of patch.products) {
+        if (!p.key || !p.label) throw new BadRequestException('Produto sem key/label.');
+        if (keys.has(p.key)) throw new BadRequestException(`Produto duplicado: ${p.key}`);
+        keys.add(p.key);
+        if (!Array.isArray(p.namePatterns)) {
+          throw new BadRequestException(`namePatterns ausente em ${p.key}`);
+        }
+      }
+    }
+    if (patch.states) {
+      const codes = new Set<string>();
+      for (const s of patch.states) {
+        if (!s.code || !s.label) throw new BadRequestException('Estado sem code/label.');
+        if (codes.has(s.code)) throw new BadRequestException(`Estado duplicado: ${s.code}`);
+        codes.add(s.code);
+      }
+    }
+    if (patch.stateBudgetByProduct) {
+      for (const [productKey, pcts] of Object.entries(patch.stateBudgetByProduct)) {
+        const sum = Object.values(pcts).reduce((s, v) => s + Number(v ?? 0), 0);
+        if (sum > 0 && Math.abs(sum - 100) > 1) {
+          throw new BadRequestException(
+            `Distribuição de ${productKey} soma ${sum.toFixed(2)}% — deve somar 100%.`,
+          );
+        }
+      }
+    }
+  }
+
+  private serialize(cfg: any): MetaConfigShape & { id: string; companyId: string } {
+    return {
+      id: cfg.id,
+      companyId: cfg.companyId,
+      products: cfg.products as any,
+      states: cfg.states as any,
+      stateBudgetByProduct: cfg.stateBudgetByProduct as any,
+      thresholds: cfg.thresholds as any,
+      reachFactor: cfg.reachFactor,
+      secondaryAccountColor: cfg.secondaryAccountColor,
+      secondaryAccountLabel: cfg.secondaryAccountLabel ?? 'Conta Secundária',
+      sparklineDays: cfg.sparklineDays,
+    };
+  }
+}

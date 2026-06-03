@@ -32,7 +32,7 @@ export function CreateAgencyForm() {
   const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [plan, setPlan] = useState<string>('TRIAL')
-  const [maxClients, setMaxClients] = useState('')
+  const [maxCompanies, setMaxCompanies] = useState('')
   const [maxUsers, setMaxUsers] = useState('')
   const [isActive, setIsActive] = useState(true)
 
@@ -56,7 +56,7 @@ export function CreateAgencyForm() {
         adminPassword,
         plan,
         isActive,
-        ...(maxClients ? { maxClients: Number(maxClients) } : {}),
+        ...(maxCompanies ? { maxCompanies: Number(maxCompanies) } : {}),
         ...(maxUsers ? { maxUsers: Number(maxUsers) } : {}),
       })
 
@@ -207,13 +207,13 @@ export function CreateAgencyForm() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">
-              Max clientes (opcional)
+              Max empresas (opcional)
             </label>
             <input
               type="number"
               min={0}
-              value={maxClients}
-              onChange={(e) => setMaxClients(e.target.value)}
+              value={maxCompanies}
+              onChange={(e) => setMaxCompanies(e.target.value)}
               placeholder="Padrão do plano"
               className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50"
             />

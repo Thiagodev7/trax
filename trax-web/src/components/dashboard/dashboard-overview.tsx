@@ -24,11 +24,11 @@ const BAR_CHART_COLORS = [
 ]
 
 interface DashboardChartsProps {
-  chartData: Array<{ mes: string; Relatórios: number; Clientes: number }>
+  chartData: Array<{ mes: string; Relatórios: number; Empresas: number }>
   barData: Array<{ name: string; relatórios: number }>
   activities: Array<{
     id: string
-    type: 'CLIENT' | 'REPORT' | 'INTEGRATION'
+    type: 'COMPANY' | 'REPORT' | 'INTEGRATION'
     title: string
     subtitle: string
     date: Date
@@ -82,7 +82,7 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                     <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="gradClientes" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="gradEmpresas" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                   </linearGradient>
@@ -110,10 +110,10 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                 />
                 <Area
                   type="monotone"
-                  dataKey="Clientes"
+                  dataKey="Empresas"
                   stroke="var(--color-accent)"
                   strokeWidth={2}
-                  fill="url(#gradClientes)"
+                  fill="url(#gradEmpresas)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -128,7 +128,7 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
         >
           <Card className="p-6">
             <div className="mb-6">
-              <h3 className="text-base font-semibold text-[var(--color-foreground)]">Top Clientes</h3>
+              <h3 className="text-base font-semibold text-[var(--color-foreground)]">Top Empresas</h3>
               <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Por volume de relatórios</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
@@ -185,7 +185,7 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                 let Icon = FileText;
                 let bgClass = 'bg-sky-500/10 text-sky-400';
                 
-                if (activity.type === 'CLIENT') {
+                if (activity.type === 'COMPANY') {
                   Icon = Users;
                   bgClass = 'bg-emerald-500/10 text-emerald-400';
                 } else if (activity.type === 'INTEGRATION') {
@@ -193,12 +193,12 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                   bgClass = 'bg-violet-500/10 text-violet-400';
                 }
 
-                return (
-                  <Link
-                    key={activity.id}
-                    href={activity.link}
-                    className="flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-2)] transition-colors group"
-                  >
+                const href = activity.link?.trim()
+                const rowClass =
+                  'flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-2)] transition-colors group'
+
+                const rowContent = (
+                  <>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bgClass}`}>
                       <Icon className="w-5 h-5" />
                     </div>
@@ -220,7 +220,17 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                         </span>
                       )}
                     </div>
+                  </>
+                )
+
+                return href ? (
+                  <Link key={activity.id} href={href} className={rowClass}>
+                    {rowContent}
                   </Link>
+                ) : (
+                  <div key={activity.id} className={rowClass}>
+                    {rowContent}
+                  </div>
                 )
               })
             )}

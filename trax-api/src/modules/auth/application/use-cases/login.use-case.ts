@@ -15,6 +15,11 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+export interface MfaChallenge {
+  requiresMfa: true;
+  mfaChallengeToken: string;
+}
+
 interface LoginMeta {
   ipAddress?: string;
   userAgent?: string;
@@ -31,7 +36,7 @@ export class LoginUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async execute(dto: LoginDto, meta?: LoginMeta): Promise<TokenPair> {
+  async execute(dto: LoginDto, meta?: LoginMeta): Promise<TokenPair | MfaChallenge> {
     const agencyId = getAgencyId();
 
     // 1. Busca usuário — sempre filtrado pelo tenant atual
@@ -45,6 +50,7 @@ export class LoginUseCase {
         role: true,
         passwordHash: true,
         isActive: true,
+        totpEnabled: true,
       },
     });
 
@@ -59,7 +65,16 @@ export class LoginUseCase {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // 3. Gera tokens
+    // 3. Se 2FA ativo, emite challenge token em vez dos tokens completos
+    if (user.totpEnabled) {
+      const mfaChallengeToken = this.jwtService.sign(
+        { sub: user.id, agencyId: user.agencyId, isMfaChallenge: true },
+        { expiresIn: '5m' },
+      );
+      return { requiresMfa: true, mfaChallengeToken };
+    }
+
+    // 4. Gera tokens
     const { accessToken, refreshToken } = await this.generateTokenPair(user, meta);
 
     // 4. Atualiza lastLoginAt

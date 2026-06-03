@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -7,7 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AgencyModule } from './modules/agency/agency.module';
-import { ClientModule } from './modules/client/client.module';
+import { CompanyModule } from './modules/company/company.module';
 import { ReportModule } from './modules/report/report.module';
 import { IntegrationModule } from './modules/integration/integration.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
@@ -19,11 +20,12 @@ import { UserModule } from './modules/user/user.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
-import { MetaConfigModule } from './modules/client/meta-config/meta-config.module';
+import { MetaConfigModule } from './modules/company/meta-config/meta-config.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -31,6 +33,17 @@ import { join } from 'path';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        APP_PORT: Joi.number().default(3000),
+        DATABASE_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        // Aceita CREDENTIALS_ENCRYPTION_KEY ou ENCRYPTION_KEY (um dos dois é obrigatório)
+        CREDENTIALS_ENCRYPTION_KEY: Joi.string().optional(),
+        ENCRYPTION_KEY: Joi.string().optional(),
+        GEMINI_API_KEY: Joi.string().optional(),
+        REDIS_URL: Joi.string().uri().optional(),
+      }),
     }),
 
     // --- Rate Limiting global ---
@@ -44,13 +57,14 @@ import { join } from 'path';
 
     // --- Infraestrutura ---
     PrismaModule,
+    RedisModule,
     ScheduleModule.forRoot(),
 
     // --- Domínio ---
     TenantModule,
     AuthModule,
     AgencyModule,
-    ClientModule,
+    CompanyModule,
     ReportModule,
     IntegrationModule,
     MetricsModule,

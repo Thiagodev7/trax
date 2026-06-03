@@ -66,7 +66,7 @@ export class UpdateAgencyDto {
   @IsInt()
   @Min(0)
   @IsOptional()
-  maxClients?: number;
+  maxCompanies?: number;
 
   @ApiPropertyOptional()
   @IsInt()

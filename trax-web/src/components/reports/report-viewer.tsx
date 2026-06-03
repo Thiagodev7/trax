@@ -9,6 +9,7 @@ import {
   ArrowLeft, Calendar, Building2, Globe, Share2, CheckCircle, Clock,
   Copy, ExternalLink, Pencil, BarChart3
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { useSharedApiClient } from '@/lib/shared-api-client'
 import { reportMetricsPath } from '@/lib/report-metrics-path'
@@ -19,8 +20,20 @@ import { CalendarTab } from './tabs/calendar-tab'
 import { KpiTab } from './tabs/kpi-tab'
 import { GoogleAdsTab } from './tabs/google-ads-tab'
 import { LinkedInAdsTab } from './tabs/linkedin-ads-tab'
+import { RdStationTab } from './tabs/rd-station-tab'
+import { NectarCrmTab } from './tabs/nectar-crm-tab'
+import { MarketingFunnelTab } from './tabs/marketing-funnel-tab'
 
-type TabKey = 'META_ADS' | 'ORGANIC' | 'CALENDAR' | 'KPI' | 'GOOGLE_ADS' | 'LINKEDIN_ADS'
+type TabKey =
+  | 'META_ADS'
+  | 'ORGANIC'
+  | 'CALENDAR'
+  | 'KPI'
+  | 'GOOGLE_ADS'
+  | 'LINKEDIN_ADS'
+  | 'RD_STATION'
+  | 'NECTAR_CRM'
+  | 'MARKETING_FUNNEL'
 
 const TAB_META: Record<TabKey, { label: string; icon: string }> = {
   META_ADS: { label: 'Meta Ads', icon: '📊' },
@@ -29,6 +42,9 @@ const TAB_META: Record<TabKey, { label: string; icon: string }> = {
   KPI: { label: 'KPIs', icon: '📈' },
   GOOGLE_ADS: { label: 'Google Ads', icon: '🎯' },
   LINKEDIN_ADS: { label: 'LinkedIn Ads', icon: '💼' },
+  RD_STATION: { label: 'RD Station', icon: '🚀' },
+  NECTAR_CRM: { label: 'Nectar CRM', icon: '🌿' },
+  MARKETING_FUNNEL: { label: 'Funil', icon: '🔀' },
 }
 
 interface ModuleConfig {
@@ -48,7 +64,7 @@ interface Report {
   shareToken: string | null
   moduleConfig: ModuleConfig | null
   layoutJson: unknown
-  client: {
+  company: {
     id: string
     name: string
     logoUrl: string | null
@@ -65,6 +81,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
   const isPublic = !!shareToken
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { status: sessionStatus } = useSession()
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -98,12 +115,18 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
     }
   }, [api, report.id, shareToken, periodStart, periodEnd, enabledTabs])
 
-  useEffect(() => { fetchMetaSpend() }, [fetchMetaSpend])
+  useEffect(() => {
+    if (isPublic) {
+      fetchMetaSpend()
+      return
+    }
+    if (sessionStatus === 'authenticated') fetchMetaSpend()
+  }, [fetchMetaSpend, isPublic, sessionStatus])
 
   async function handlePublish() {
     try {
       await api.patch<unknown>(`/reports/${report.id}/publish`, {})
-      toast.success('Relatório publicado! Compartilhe o link com seu cliente.')
+      toast.success('Relatório publicado! Compartilhe o link com a empresa.')
       startTransition(() => router.refresh())
     } catch (error: any) {
       toast.error(error.message || 'Erro ao publicar relatório')
@@ -132,9 +155,9 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              {isPublic && report.client.logoUrl && (
+              {isPublic && report.company.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={report.client.logoUrl} alt={report.client.name} className="h-10 w-auto rounded border border-[var(--color-border)] mb-3" />
+                <img src={report.company.logoUrl} alt={report.company.name} className="h-10 w-auto rounded border border-[var(--color-border)] mb-3" />
               )}
               <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight leading-tight">
                 {report.title}
@@ -142,7 +165,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <div className="flex items-center gap-1.5 text-sm text-[var(--color-muted-foreground)]">
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>{report.client.name}</span>
+                  <span>{report.company.name}</span>
                 </div>
                 {report.periodStart && report.periodEnd && (
                   <div className="flex items-center gap-1.5 text-sm text-[var(--color-muted-foreground)]">
@@ -283,7 +306,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
                 periodEnd={periodEnd}
                 selectedDate={selectedDate}
                 onSelectDate={(d) => { setSelectedDate(d); if (d) setActiveTab('ORGANIC') }}
-                clientId={isPublic ? undefined : report.client.id}
+                companyId={isPublic ? undefined : report.company.id}
                 shareToken={shareToken}
               />
             )}
@@ -294,6 +317,25 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
               <GoogleAdsTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} shareToken={shareToken} />
             )}
             {activeTab === 'LINKEDIN_ADS' && <LinkedInAdsTab />}
+            {activeTab === 'RD_STATION' && (
+              <RdStationTab
+                reportId={report.id}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                shareToken={shareToken}
+              />
+            )}
+            {activeTab === 'NECTAR_CRM' && (
+              <NectarCrmTab reportId={report.id} shareToken={shareToken} />
+            )}
+            {activeTab === 'MARKETING_FUNNEL' && (
+              <MarketingFunnelTab
+                reportId={report.id}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                shareToken={shareToken}
+              />
+            )}
           </div>
         </>
       )}

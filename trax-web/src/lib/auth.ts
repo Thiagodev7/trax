@@ -62,9 +62,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: me.role,
             agencyId: me.agencyId,
             agency: me.agency,
-            clients: me.clients,
+            companies: me.companies,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
+            expiresIn,
+            agencyDomain: domain,
+            isSuperAdmin: false,
+          }
+        } catch {
+          return null
+        }
+      },
+    }),
+
+    // ── Provider para fluxo 2FA: aceita tokens já validados pelo challenge TOTP ──
+    Credentials({
+      id: 'credentials-preauth',
+      name: 'credentials-preauth',
+      credentials: {
+        accessToken: { label: 'Access Token', type: 'text' },
+        refreshToken: { label: 'Refresh Token', type: 'text' },
+        expiresIn: { label: 'Expires In', type: 'text' },
+        domain: { label: 'Domain', type: 'text' },
+      },
+      async authorize(credentials) {
+        const accessToken = credentials.accessToken as string
+        const refreshToken = credentials.refreshToken as string
+        const expiresIn = Number(credentials.expiresIn ?? 900)
+        const domain = (credentials.domain as string) || 'localhost'
+
+        if (!accessToken) return null
+
+        try {
+          const meRes = await fetch(`${process.env.API_URL}/api/v1/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'X-Agency-Domain': domain,
+            },
+          })
+          if (!meRes.ok) return null
+          const me = await meRes.json()
+
+          return {
+            id: me.id,
+            email: me.email,
+            name: me.name,
+            role: me.role,
+            agencyId: me.agencyId,
+            agency: me.agency,
+            companies: me.companies,
+            accessToken,
+            refreshToken,
             expiresIn,
             agencyDomain: domain,
             isSuperAdmin: false,
@@ -130,7 +178,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: u.role,
           agencyId: u.agencyId,
           agency: u.agency,
-          clients: u.clients,
+          companies: u.companies,
           accessToken: u.accessToken,
           refreshToken: u.refreshToken,
           accessTokenExpires: Date.now() + expiresIn * 1000,
@@ -155,7 +203,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       u.role = token.role as string
       u.agencyId = token.agencyId as string
       u.agency = token.agency as unknown
-      u.clients = token.clients as unknown
+      u.companies = token.companies as unknown
       u.isSuperAdmin = token.isSuperAdmin as boolean
       ;(session as { accessToken?: string; error?: string }).accessToken =
         token.accessToken as string

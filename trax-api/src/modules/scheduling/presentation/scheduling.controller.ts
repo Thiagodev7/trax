@@ -5,7 +5,7 @@ import { SchedulingService } from '../application/scheduling.service';
 
 @ApiBearerAuth()
 @ApiTags('Scheduling')
-@Controller('clients/:clientId/scheduled-posts')
+@Controller('companies/:companyId/scheduled-posts')
 export class SchedulingController {
   constructor(private readonly scheduling: SchedulingService) {}
 
@@ -14,9 +14,9 @@ export class SchedulingController {
   @ApiOperation({ summary: 'Listar posts agendados do cliente' })
   list(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
   ) {
-    return this.scheduling.list(agencyId, clientId);
+    return this.scheduling.list(agencyId, companyId);
   }
 
   @Post()
@@ -24,10 +24,10 @@ export class SchedulingController {
   @ApiOperation({ summary: 'Agendar post orgânico' })
   create(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Body() body: { platform: 'instagram' | 'facebook'; caption?: string; mediaUrl: string; scheduledAt: string },
   ) {
-    return this.scheduling.create(agencyId, { ...body, clientId });
+    return this.scheduling.create(agencyId, { ...body, companyId });
   }
 
   @Delete(':id')

@@ -15,7 +15,7 @@ import { useQuery } from '@tanstack/react-query'
 
 const schema = z.object({
   title: z.string().min(4, 'Título deve ter pelo menos 4 caracteres'),
-  clientId: z.string().min(1, 'Selecione um cliente'),
+  companyId: z.string().min(1, 'Selecione um cliente'),
   periodStart: z.string().min(1, 'Data de início obrigatória'),
   periodEnd: z.string().min(1, 'Data de fim obrigatória'),
   description: z.string().optional(),
@@ -32,7 +32,7 @@ export default function NewReportPage() {
   const { data: clientsData, isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const res = await api.get<any>('/clients')
+      const res = await api.get<any>('/companies')
       return res?.data || res || []
     },
   })
@@ -48,7 +48,7 @@ export default function NewReportPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       title: '',
-      clientId: '',
+      companyId: '',
       periodStart: '',
       periodEnd: '',
       description: '',
@@ -56,14 +56,14 @@ export default function NewReportPage() {
   })
 
   const isLoading = isPending || isSubmitting || isLoadingClients
-  const selectedClientId = watch('clientId')
+  const selectedClientId = watch('companyId')
   const selectedClient = clients.find((c) => c.id === selectedClientId)
 
   async function onSubmit(data: FormData) {
     try {
       const report = await api.post<any>('/reports', {
         title: data.title,
-        clientId: data.clientId,
+        companyId: data.companyId,
         periodStart: new Date(data.periodStart).toISOString(),
         periodEnd: new Date(data.periodEnd).toISOString(),
         description: data.description || undefined,
@@ -124,14 +124,14 @@ export default function NewReportPage() {
 
           {/* Cliente */}
           <div className="space-y-1.5">
-            <label htmlFor="clientId" className="text-sm font-medium text-[var(--color-foreground)]">
+            <label htmlFor="companyId" className="text-sm font-medium text-[var(--color-foreground)]">
               Cliente *
             </label>
             <div className="relative">
               <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted)]" />
               <select
-                id="clientId"
-                {...register('clientId')}
+                id="companyId"
+                {...register('companyId')}
                 disabled={isLoading || clients.length === 0}
                 className="w-full pl-10 pr-4 py-2.5 text-sm bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-20 transition-all disabled:opacity-50 appearance-none"
               >
@@ -146,13 +146,13 @@ export default function NewReportPage() {
             {clients.length === 0 && (
               <p className="text-xs text-amber-400">
                 Nenhum cliente encontrado.{' '}
-                <Link href="/clients/new" className="underline hover:text-amber-300">
+                <Link href="/companies/new" className="underline hover:text-amber-300">
                   Cadastre um cliente primeiro.
                 </Link>
               </p>
             )}
-            {errors.clientId && (
-              <p className="text-xs text-red-400">{errors.clientId.message}</p>
+            {errors.companyId && (
+              <p className="text-xs text-red-400">{errors.companyId.message}</p>
             )}
           </div>
 

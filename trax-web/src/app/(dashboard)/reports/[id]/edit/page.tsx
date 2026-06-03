@@ -26,15 +26,15 @@ export default async function EditReportPage({
     notFound()
   }
 
-  let clientIntegrations: any[] = []
+  let companyIntegrations: any[] = []
   try {
-    clientIntegrations = await apiRequest<any[]>(
-      `/clients/${report.client.id}/integrations`,
+    companyIntegrations = await apiRequest<any[]>(
+      `/companies/${report.company.id}/integrations`,
       { domain: host }
     )
   } catch {
-    clientIntegrations = []
+    companyIntegrations = []
   }
 
-  return <ReportBuilder report={report} clientIntegrations={clientIntegrations} />
+  return <ReportBuilder report={report} companyIntegrations={companyIntegrations} />
 }

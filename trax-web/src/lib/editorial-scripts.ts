@@ -1,3 +1,9 @@
+/**
+ * Scripts editoriais padrão para seção de conteúdo orgânico.
+ * Estes são exemplos genéricos — cada cliente pode ter seus próprios scripts
+ * configurados na seção de Conteúdo do relatório.
+ */
+
 export interface EditorialScript {
   format: string;
   color: string;
@@ -12,12 +18,12 @@ export const DEFAULT_EDITORIAL_SCRIPTS: EditorialScript[] = [
   {
     format: 'REEL',
     color: '#dd2a7b',
-    produto: 'TGC',
-    title: 'Reel de Tutorial — NF-e',
-    hook: 'Você sabia que dá pra emitir NF-e em menos de 1 minuto?',
+    produto: 'Produto Principal',
+    title: 'Reel de Tutorial — Como usar em 1 minuto',
+    hook: 'Você sabia que dá pra resolver isso em menos de 1 minuto?',
     structure: [
-      'Hook (0–3s): Mostre o problema — processo lento e manual',
-      'Demonstração: passo a passo rápido no sistema TGC',
+      'Hook (0–3s): Mostre o problema do cliente antes da solução',
+      'Demonstração: passo a passo rápido no produto/serviço',
       'CTA: "Comente DEMO e te mandamos um acesso gratuito"',
     ],
     tip: 'Reels com demonstração de produto têm 40% mais alcance orgânico.',
@@ -25,25 +31,25 @@ export const DEFAULT_EDITORIAL_SCRIPTS: EditorialScript[] = [
   {
     format: 'CARROSSEL',
     color: '#F59E0B',
-    produto: 'DP',
-    title: '5 Erros na Folha de Pagamento',
-    hook: '5 erros que fazem empresas pagarem multa no eSocial todo mês',
+    produto: 'Solução Principal',
+    title: '5 Erros que custam caro — e como evitar',
+    hook: '5 erros que fazem empresas perderem dinheiro todo mês',
     structure: [
-      'Slide 1: Hook com número de autuações em 2025',
+      'Slide 1: Hook com dado ou estatística impactante',
       'Slides 2–6: Um erro por slide com como evitar',
-      'Último slide: "Quer folha sem erro? Link na bio"',
+      'Último slide: "Quer resolver? Link na bio"',
     ],
     tip: 'Carrosséis têm 3× mais saves — excelente para o algoritmo.',
   },
   {
     format: 'IMAGE',
     color: '#6366F1',
-    produto: 'Ordix',
+    produto: 'Produto / Segmento',
     title: 'Post de Dado Impactante',
-    hook: '87% dos estoques brasileiros têm divergência. O seu está no controle?',
+    hook: '87% das empresas do setor têm este problema. A sua está no controle?',
     structure: [
       'Visual: número grande em fundo escuro com destaque colorido',
-      'Copy: contextualize o dado e conecte ao Ordix',
+      'Copy: contextualize o dado e conecte ao produto/serviço',
       'CTA: "Siga para mais dados do setor"',
     ],
     tip: 'Posts com estatísticas têm 2× mais compartilhamentos.',
@@ -51,11 +57,11 @@ export const DEFAULT_EDITORIAL_SCRIPTS: EditorialScript[] = [
   {
     format: 'STORIES',
     color: '#8134af',
-    produto: 'Box',
+    produto: 'Produto / Serviço',
     title: 'Stories de Enquete',
     hook: 'Qual é o maior problema da sua empresa hoje?',
     structure: [
-      'Story 1: Enquete — A: custo alto  B: falta de controle',
+      'Story 1: Enquete — A: Opção 1  B: Opção 2',
       'Story 2: Revele o resultado + "a maioria escolheu X — e nós resolvemos"',
       'Story 3: Link direto para formulário de demonstração',
     ],
@@ -64,51 +70,51 @@ export const DEFAULT_EDITORIAL_SCRIPTS: EditorialScript[] = [
   {
     format: 'REEL',
     color: '#10B981',
-    produto: 'QIAE',
-    title: 'Antes e Depois — Qualidade',
-    hook: 'Como reduzir retrabalho na produção em 30 dias',
+    produto: 'Produto / Solução',
+    title: 'Antes e Depois — Resultados Reais',
+    hook: 'Como nosso cliente reduziu custos em 30 dias',
     structure: [
-      'Antes: caos na linha de produção',
-      'Depois: dashboard QIAE com indicadores em tempo real',
-      'CTA: agende uma demonstração',
+      'Antes: mostre o cenário do problema',
+      'Depois: resultado concreto com números',
+      'CTA: "Agende uma demonstração gratuita"',
     ],
-    tip: 'Reels "antes/depois" convertem bem em B2B industrial.',
+    tip: 'Reels "antes/depois" convertem bem em B2B e B2C.',
   },
   {
     format: 'CARROSSEL',
     color: '#3B82F6',
-    produto: 'TGC',
-    title: 'Checklist Fiscal do Mês',
-    hook: '7 obrigações que sua contabilidade não pode esquecer este mês',
+    produto: 'Segmento do Cliente',
+    title: 'Checklist do Mês',
+    hook: '7 pontos que sua equipe não pode esquecer este mês',
     structure: [
-      'Um item por slide com prazo e multa',
-      'Slide final: "Automatize com TGC"',
+      'Um item por slide com prazo e consequência',
+      'Slide final: "Automatize — [produto/serviço]"',
     ],
     tip: 'Conteúdo checklist gera alto save rate.',
   },
   {
     format: 'IMAGE',
     color: '#8B5CF6',
-    produto: 'Institucional',
-    title: 'Bastidores Tron',
-    hook: 'Conheça o time por trás dos sistemas que movem o Brasil',
+    produto: 'Marca / Empresa',
+    title: 'Bastidores da Equipe',
+    hook: 'Conheça o time por trás dos resultados',
     structure: [
-      'Foto do time ou escritório',
+      'Foto do time, escritório ou processo',
       'Copy humanizada sobre cultura e missão',
-      'CTA: "Trabalhe conosco" ou "Conheça nossos produtos"',
+      'CTA: "Trabalhe conosco" ou "Conheça nossos serviços"',
     ],
     tip: 'Posts institucionais fortalecem confiança da marca.',
   },
   {
     format: 'REEL',
     color: '#F59E0B',
-    produto: 'DP',
-    title: 'Mito vs Verdade — eSocial',
-    hook: '3 mitos sobre eSocial que custam caro',
+    produto: 'Produto / Serviço',
+    title: 'Mito vs Verdade',
+    hook: '3 mitos sobre [área de atuação] que custam caro',
     structure: [
-      'Mito 1 → Verdade (15s cada)',
-      'CTA: "Evite multas com Tron DP"',
+      'Mito → Verdade (15s cada)',
+      'CTA: "Evite erros comuns — [produto/serviço]"',
     ],
-    tip: 'Formato mito/verdade gera comentários e alcance.',
+    tip: 'Formato mito/verdade gera comentários e alcance orgânico.',
   },
 ];

@@ -35,6 +35,10 @@ Portadas de `detectProduct()` e `detectStates()` do tron:
 
 Produtos: TGC, DP, Box, Ordix, QIAE, E-book, Institucional, Editorial.
 
+## Meta — OAuth e variáveis
+
+Ver [meta-app-setup.md](./meta-app-setup.md) (`META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`).
+
 ## Setup recomendado no Trax
 
 1. Cliente → Integrações:

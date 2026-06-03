@@ -16,7 +16,7 @@ interface ScheduledPost {
 }
 
 interface Props {
-  clientId: string
+  companyId: string
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelado',
 }
 
-export function SchedulePostsPanel({ clientId }: Props) {
+export function SchedulePostsPanel({ companyId }: Props) {
   const api = useApiClient()
   const [posts, setPosts] = useState<ScheduledPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,14 +40,14 @@ export function SchedulePostsPanel({ clientId }: Props) {
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get<ScheduledPost[]>(`/clients/${clientId}/scheduled-posts`)
+      const data = await api.get<ScheduledPost[]>(`/companies/${companyId}/scheduled-posts`)
       setPosts(data)
     } catch {
       setPosts([])
     } finally {
       setLoading(false)
     }
-  }, [api, clientId])
+  }, [api, companyId])
 
   useEffect(() => { fetchPosts() }, [fetchPosts])
 
@@ -63,7 +63,7 @@ export function SchedulePostsPanel({ clientId }: Props) {
     }
     setSubmitting(true)
     try {
-      await api.post(`/clients/${clientId}/scheduled-posts`, {
+      await api.post(`/companies/${companyId}/scheduled-posts`, {
         platform,
         caption: caption.trim() || undefined,
         mediaUrl,
@@ -84,7 +84,7 @@ export function SchedulePostsPanel({ clientId }: Props) {
 
   async function handleCancel(id: string) {
     try {
-      await api.delete(`/clients/${clientId}/scheduled-posts/${id}`)
+      await api.delete(`/companies/${companyId}/scheduled-posts/${id}`)
       toast.success('Agendamento cancelado')
       fetchPosts()
     } catch (err: unknown) {

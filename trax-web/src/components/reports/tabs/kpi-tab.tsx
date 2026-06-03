@@ -33,6 +33,12 @@ interface CrmMetrics {
   historico: Array<{ mes: string; ganhas: number; perdidas: number; receita: number }>
   funil: Array<{ etapa: string; quantidade: number; valor: number }>
   syncedAt?: string
+  source?: string
+  primarySource?: 'NECTAR_CRM' | 'RD_STATION' | 'MERGED'
+  sources?: {
+    nectar?: { pipeline: { contatos: number; vendida: number }; receita: number }
+    rd?: { pipeline: { contatos: number; vendida: number }; totalLeads: number }
+  }
 }
 
 interface Props {
@@ -106,7 +112,7 @@ export function KpiTab({ reportId, metaSpend, shareToken }: Props) {
         <AlertCircle className="w-10 h-10 text-[var(--color-muted)] mx-auto mb-3" />
         <p className="font-medium text-[var(--color-foreground)]">Dados de CRM não disponíveis</p>
         <p className="text-sm text-[var(--color-muted-foreground)] mt-1">
-          {error || 'Sincronize a integração Nectar CRM para visualizar os KPIs.'}
+          {error || 'Sincronize uma integração de CRM (Nectar CRM ou RD Station) para visualizar os KPIs.'}
         </p>
         <button onClick={fetchData} className="mt-3 text-sm text-[var(--color-primary)] hover:underline inline-flex items-center gap-1">
           <RefreshCw className="w-3 h-3" /> Tentar novamente
@@ -125,9 +131,12 @@ export function KpiTab({ reportId, metaSpend, shareToken }: Props) {
     )
   }
 
-  const { vendas, receita, ticketMedio, mrr, historico, funil } = metrics
+  const { vendas, receita, ticketMedio, mrr, historico, funil, sources, primarySource } = metrics
+  const isMerged = primarySource === 'MERGED' || metrics.source === 'MERGED'
+  const isRdOnly = primarySource === 'RD_STATION' || metrics.source === 'RD_STATION'
 
   const totalContatos = pipeline.totalContatos ?? pipeline.contatos ?? 0
+  const rdLeads = sources?.rd?.totalLeads ?? (isRdOnly ? totalContatos : 0)
   const vendasCount = vendas ?? pipeline.oportunidadesGanhas ?? pipeline.vendida ?? 0
   const cac = metaSpend && vendasCount > 0 ? metaSpend / vendasCount : 0
   const roas = metaSpend && metaSpend > 0 ? receita / metaSpend : 0
@@ -135,9 +144,34 @@ export function KpiTab({ reportId, metaSpend, shareToken }: Props) {
 
   return (
     <div className="space-y-6">
+      {isMerged && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)] card px-3 py-2 border-[var(--color-border)]">
+          <span>🔀</span>
+          <span>
+            Combinado: <strong>{rdLeads}</strong> leads (RD Station) · receita e vendas (Nectar CRM).
+            Abas <strong>RD Station</strong>, <strong>Nectar</strong> e <strong>Funil</strong> para detalhes.
+          </span>
+        </div>
+      )}
+      {isRdOnly && !isMerged && (
+        <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+          <span>🚀</span>
+          <span>Dados via RD Station. Receita/MRR exigem Nectar CRM.</span>
+        </div>
+      )}
+      {primarySource === 'NECTAR_CRM' && !isMerged && (
+        <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+          <span>🌿</span>
+          <span>Dados via Nectar CRM.</span>
+        </div>
+      )}
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Contatos (Mês)" value={String(totalContatos)} icon={Users} />
+        <KpiCard
+          label={isMerged ? 'Leads RD (período)' : 'Contatos (Mês)'}
+          value={String(isMerged ? rdLeads : totalContatos)}
+          icon={Users}
+        />
         <KpiCard label="Vendas Fechadas" value={String(vendasCount)} icon={Target} color="text-emerald-400" />
         <KpiCard label="Receita Total" value={fmtCurrency(receita)} icon={DollarSign} color="text-emerald-400" />
         <KpiCard label="MRR" value={fmtCurrency(mrr)} icon={TrendingUp} />

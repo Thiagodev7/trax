@@ -28,7 +28,7 @@ const REPORT_SELECT = {
   updatedAt: true,
   shareToken: true,
   shareExpiresAt: true,
-  client: {
+  company: {
     select: {
       id: true,
       name: true,
@@ -63,14 +63,14 @@ export class GetReportUseCase {
 
     if (!report) throw new NotFoundException('Relatório não encontrado');
 
-    // CLIENT_VIEWER: apenas relatórios publicados dos seus clientes
-    if (user.role === UserRole.CLIENT_VIEWER) {
+    // COMPANY_VIEWER: apenas relatórios publicados das suas empresas
+    if (user.role === UserRole.COMPANY_VIEWER) {
       if (report.status !== ReportStatus.PUBLISHED) {
         throw new ForbiddenException('Relatório não disponível');
       }
-      const link = await this.prisma.userClient.findUnique({
+      const link = await this.prisma.userCompany.findUnique({
         where: {
-          userId_clientId: { userId: user.sub, clientId: report.client.id },
+          userId_companyId: { userId: user.sub, companyId: report.company.id },
         },
       });
       if (!link) throw new ForbiddenException('Acesso negado a este relatório');

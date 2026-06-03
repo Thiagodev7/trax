@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, UserPlus, Shield, Eye, Building2,
-  MoreVertical, Trash2, Power, ChevronDown,
-  Check, Copy, X, Loader2,
+  MoreVertical, Trash2, Power, UserCog,
+  Check, Copy, X, Loader2, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApiClient } from '@/lib/api-client-browser'
@@ -16,42 +16,32 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
+import type { ApiUser, ApiUserRole, AgencyPlanInfo } from '@/types/api'
 
-type UserRole = 'AGENCY_ADMIN' | 'AGENCY_VIEWER' | 'CLIENT_VIEWER'
+type UserRole = ApiUserRole
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-  avatarUrl?: string | null
-  isActive: boolean
-  lastLoginAt?: string | null
-  createdAt: string
-  userClients: { client: { id: string; name: string } }[]
-}
-
-interface Client {
+interface Company {
   id: string
   name: string
 }
 
 interface UsersTableProps {
-  users: User[]
-  clients: Client[]
+  users: ApiUser[]
+  companies: Company[]
+  plan: AgencyPlanInfo | null
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: typeof Shield; color: string; bg: string }> = {
   AGENCY_ADMIN: { label: 'Admin', icon: Shield, color: 'text-violet-400', bg: 'bg-violet-500/10' },
   AGENCY_VIEWER: { label: 'Visualizador', icon: Eye, color: 'text-sky-400', bg: 'bg-sky-500/10' },
-  CLIENT_VIEWER: { label: 'Cliente', icon: Building2, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  COMPANY_VIEWER: { label: 'Empresa', icon: Building2, color: 'text-amber-400', bg: 'bg-amber-500/10' },
 }
 
 const inviteSchema = z.object({
   name: z.string().min(2, 'Nome muito curto'),
   email: z.string().email('Email inválido'),
-  role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'CLIENT_VIEWER']),
-  clientIds: z.array(z.string()).optional(),
+  role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'COMPANY_VIEWER']),
+  companyIds: z.array(z.string()).optional(),
 })
 type InviteForm = z.infer<typeof inviteSchema>
 
@@ -66,12 +56,12 @@ function RoleBadge({ role }: { role: UserRole }) {
   )
 }
 
-function UserAvatar({ user }: { user: User }) {
+function UserAvatar({ user }: { user: ApiUser }) {
   if (user.avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={user.avatarUrl} alt={user.name} className="w-9 h-9 rounded-full object-cover ring-2 ring-[var(--color-border)]" />
   }
-  const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const initials = user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   const colors = ['bg-violet-500', 'bg-sky-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500']
   const colorIdx = user.name.charCodeAt(0) % colors.length
   return (
@@ -81,12 +71,12 @@ function UserAvatar({ user }: { user: User }) {
   )
 }
 
-function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => void }) {
+function InviteModal({ companies, onClose }: { companies: Company[]; onClose: () => void }) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [tempCredentials, setTempCredentials] = useState<{ email: string; password: string } | null>(null)
-  const [selectedClients, setSelectedClients] = useState<string[]>([])
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<InviteForm>({
     resolver: zodResolver(inviteSchema),
@@ -100,7 +90,7 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
     try {
       const result = await api.post('/users/invite', {
         ...data,
-        clientIds: role === 'CLIENT_VIEWER' ? selectedClients : undefined,
+        companyIds: role === 'COMPANY_VIEWER' ? selectedCompanies : undefined,
       }) as { email: string; tempPassword: string }
       setTempCredentials({ email: result.email, password: result.tempPassword })
       startTransition(() => router.refresh())
@@ -198,24 +188,24 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
         {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
       </div>
 
-      {/* Clients for CLIENT_VIEWER */}
-      {role === 'CLIENT_VIEWER' && (
+      {/* Companies for COMPANY_VIEWER */}
+      {role === 'COMPANY_VIEWER' && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-2"
         >
           <label className="text-sm font-medium text-[var(--color-foreground)]">
-            Clientes visíveis <span className="text-red-400">*</span>
+            Empresas visíveis <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
-            {clients.map((c) => (
+            {companies.map((c) => (
               <label key={c.id} className="cursor-pointer flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
                 <input
                   type="checkbox"
                   className="w-4 h-4 accent-[var(--color-primary)]"
-                  checked={selectedClients.includes(c.id)}
-                  onChange={(e) => setSelectedClients(prev =>
+                  checked={selectedCompanies.includes(c.id)}
+                  onChange={(e) => setSelectedCompanies(prev =>
                     e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
                   )}
                 />
@@ -223,8 +213,8 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
               </label>
             ))}
           </div>
-          {selectedClients.length === 0 && (
-            <p className="text-xs text-amber-400">Selecione ao menos um cliente.</p>
+          {selectedCompanies.length === 0 && (
+            <p className="text-xs text-amber-400">Selecione ao menos uma empresa.</p>
           )}
         </motion.div>
       )}
@@ -241,13 +231,123 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
   )
 }
 
-export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
+// ─── Edit Role Modal ──────────────────────────────────────────────────────────
+function EditRoleModal({
+  user,
+  companies,
+  onClose,
+}: {
+  user: ApiUser
+  companies: Company[]
+  onClose: () => void
+}) {
+  const api = useApiClient()
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>(
+    user.userCompanies.map(uc => uc.company.id),
+  )
+
+  const schema = z.object({
+    role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'COMPANY_VIEWER']),
+  })
+  type FormData = z.infer<typeof schema>
+
+  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<FormData>({
+    defaultValues: { role: user.role },
+  })
+
+  const role = watch('role')
+  const isLoading = isSubmitting || isPending
+
+  async function onSubmit(data: FormData) {
+    try {
+      await api.patch(`/users/${user.id}`, {
+        role: data.role,
+        companyIds: data.role === 'COMPANY_VIEWER' ? selectedCompanies : undefined,
+      })
+      toast.success('Cargo atualizado.')
+      startTransition(() => router.refresh())
+      onClose()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar cargo.')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-[var(--color-foreground)]">Nova função</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(ROLE_CONFIG) as UserRole[]).map((r) => {
+            const cfg = ROLE_CONFIG[r]
+            const Icon = cfg.icon
+            return (
+              <label key={r} className="cursor-pointer">
+                <input type="radio" value={r} {...register('role')} className="sr-only peer" />
+                <div className={cn(
+                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] transition-all',
+                  'peer-checked:border-[var(--color-primary)] peer-checked:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)]/40',
+                )}>
+                  <Icon className={cn('w-4 h-4', cfg.color)} />
+                  <span className="text-xs font-medium text-[var(--color-foreground)]">{cfg.label}</span>
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {role === 'COMPANY_VIEWER' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+          <label className="text-sm font-medium text-[var(--color-foreground)]">
+            Empresas visíveis <span className="text-red-400">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+            {companies.map((c) => (
+              <label key={c.id} className="cursor-pointer flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-[var(--color-primary)]"
+                  checked={selectedCompanies.includes(c.id)}
+                  onChange={(e) => setSelectedCompanies(prev =>
+                    e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                  )}
+                />
+                <span className="text-sm text-[var(--color-foreground)] truncate">{c.name}</span>
+              </label>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      <div className="flex gap-3 pt-1">
+        <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm rounded-xl bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-border)] transition-colors">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex-1 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          Salvar
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export function UsersTable({ users: initialUsers, companies, plan }: UsersTableProps) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [editRoleUser, setEditRoleUser] = useState<ApiUser | null>(null)
 
-  async function toggleActive(user: User) {
+  const atLimit = plan ? initialUsers.filter(u => u.isActive).length >= plan.maxUsers : false
+
+  async function toggleActive(user: ApiUser) {
     try {
       await api.patch(`/users/${user.id}`, { isActive: !user.isActive })
       toast.success(user.isActive ? 'Usuário desativado.' : 'Usuário ativado.')
@@ -257,7 +357,7 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
     }
   }
 
-  async function handleDelete(user: User) {
+  async function handleDelete(user: ApiUser) {
     if (!confirm(`Tem certeza que deseja remover ${user.name}?`)) return
     try {
       await api.delete(`/users/${user.id}`)
@@ -270,17 +370,37 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
 
   return (
     <>
+      {/* Plan limit banner */}
+      {plan && atLimit && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 mb-2"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-300">
+            <span className="font-semibold">Limite atingido.</span> Seu plano <strong>{plan.plan}</strong> permite {plan.maxUsers} usuário(s) ativo(s).{' '}
+            <a href="/settings/plan" className="underline hover:text-amber-200 transition-colors">Fazer upgrade</a> para convidar mais membros.
+          </p>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Equipe</h2>
           <p className="text-[var(--color-muted-foreground)] mt-0.5 text-sm">
-            {initialUsers.length} {initialUsers.length === 1 ? 'membro' : 'membros'} na agência
+            {initialUsers.filter(u => u.isActive).length}
+            {plan ? `/${plan.maxUsers}` : ''} {initialUsers.filter(u => u.isActive).length === 1 ? 'membro ativo' : 'membros ativos'}
           </p>
         </div>
         <Dialog.Root open={inviteOpen} onOpenChange={setInviteOpen}>
           <Dialog.Trigger asChild>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-lg glow-primary">
+            <button
+              disabled={atLimit}
+              title={atLimit ? `Limite de ${plan?.maxUsers} usuários atingido` : undefined}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-lg glow-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
               <UserPlus className="w-4 h-4" />
               Convidar Usuário
             </button>
@@ -295,18 +415,43 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
                     Convidar Usuário
                   </Dialog.Title>
                   <Dialog.Description className="text-sm text-[var(--color-muted-foreground)]">
-                    Crie um acesso para sua equipe ou clientes.
+                    Crie um acesso para sua equipe ou empresas.
                   </Dialog.Description>
                 </div>
                 <Dialog.Close className="p-1.5 rounded-lg hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
                   <X className="w-4 h-4" />
                 </Dialog.Close>
               </div>
-              <InviteModal clients={clients} onClose={() => setInviteOpen(false)} />
+              <InviteModal companies={companies} onClose={() => setInviteOpen(false)} />
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
       </div>
+
+      {/* Edit Role Dialog */}
+      <Dialog.Root open={!!editRoleUser} onOpenChange={(open) => { if (!open) setEditRoleUser(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <Dialog.Title className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Alterar Cargo
+                </Dialog.Title>
+                <Dialog.Description className="text-sm text-[var(--color-muted-foreground)]">
+                  {editRoleUser?.name}
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className="p-1.5 rounded-lg hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
+                <X className="w-4 h-4" />
+              </Dialog.Close>
+            </div>
+            {editRoleUser && (
+              <EditRoleModal user={editRoleUser} companies={companies} onClose={() => setEditRoleUser(null)} />
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -350,7 +495,7 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  {['Usuário', 'Função', 'Clientes', 'Status', 'Último acesso', ''].map((h) => (
+                  {['Usuário', 'Função', 'Empresas', 'Status', 'Último acesso', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
                       {h}
                     </th>
@@ -383,16 +528,16 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
                         <RoleBadge role={user.role} />
                       </td>
                       <td className="px-4 py-3">
-                        {user.userClients.length > 0 ? (
+                        {user.userCompanies.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {user.userClients.slice(0, 2).map(uc => (
-                              <span key={uc.client.id} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]">
-                                {uc.client.name}
+                            {user.userCompanies.slice(0, 2).map(uc => (
+                              <span key={uc.company.id} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]">
+                                {uc.company.name}
                               </span>
                             ))}
-                            {user.userClients.length > 2 && (
+                            {user.userCompanies.length > 2 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)]">
-                                +{user.userClients.length - 2}
+                                +{user.userCompanies.length - 2}
                               </span>
                             )}
                           </div>
@@ -424,6 +569,13 @@ export function UsersTable({ users: initialUsers, clients }: UsersTableProps) {
                               className="min-w-[160px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl p-1 z-50"
                               align="end"
                             >
+                              <DropdownMenu.Item
+                                onClick={() => setEditRoleUser(user)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] rounded-lg hover:bg-[var(--color-surface-2)] cursor-pointer outline-none"
+                              >
+                                <UserCog className="w-3.5 h-3.5" />
+                                Alterar cargo
+                              </DropdownMenu.Item>
                               <DropdownMenu.Item
                                 onClick={() => toggleActive(user)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-foreground)] rounded-lg hover:bg-[var(--color-surface-2)] cursor-pointer outline-none"

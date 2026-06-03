@@ -16,11 +16,11 @@ export class InviteUserDto {
   role: UserRole;
 
   @ApiPropertyOptional({
-    description: 'IDs dos clientes visíveis (obrigatório para CLIENT_VIEWER)',
+    description: 'IDs das empresas visíveis (obrigatório para COMPANY_VIEWER)',
     type: [String],
   })
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  clientIds?: string[];
+  companyIds?: string[];
 }

@@ -25,6 +25,13 @@ import { UpdatePasswordUseCase } from '../application/use-cases/update-password.
 import { UpdateNotificationPreferencesUseCase } from '../application/use-cases/update-notification-preferences.use-case';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { VerifyTotpDto, MfaLoginDto } from './dto/totp.dto';
+import {
+  SetupTotpUseCase,
+  EnableTotpUseCase,
+  DisableTotpUseCase,
+  VerifyTotpLoginUseCase,
+} from '../application/use-cases/totp.use-case';
 
 const REFRESH_COOKIE_NAME = 'trax_refresh';
 const COOKIE_OPTIONS = {
@@ -45,6 +52,10 @@ export class AuthController {
     private readonly getMeUseCase: GetMeUseCase,
     private readonly updatePasswordUseCase: UpdatePasswordUseCase,
     private readonly updateNotificationPreferencesUseCase: UpdateNotificationPreferencesUseCase,
+    private readonly setupTotpUseCase: SetupTotpUseCase,
+    private readonly enableTotpUseCase: EnableTotpUseCase,
+    private readonly disableTotpUseCase: DisableTotpUseCase,
+    private readonly verifyTotpLoginUseCase: VerifyTotpLoginUseCase,
   ) {}
 
   @Public()
@@ -60,16 +71,22 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.loginUseCase.execute(dto, {
+    const result = await this.loginUseCase.execute(dto, {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
     });
+
+    // 2FA — retorna challenge token sem criar sessão
+    if ('requiresMfa' in result) {
+      return result;
+    }
+
     // Seta refresh token em cookie httpOnly seguro
-    res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
+    res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, COOKIE_OPTIONS);
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: tokens.expiresIn,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
     };
   }
 
@@ -133,5 +150,51 @@ export class AuthController {
     @Body() dto: UpdateNotificationPreferencesDto,
   ) {
     return this.updateNotificationPreferencesUseCase.execute(user.sub, dto);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 2FA / TOTP
+  // ────────────────────────────────────────────────────────────────────────────
+
+  @Public()
+  @Post('totp/verify-login')
+  @Version('1')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiOperation({ summary: 'Verifica código TOTP após login com email/senha (segundo fator)' })
+  async verifyTotpLogin(
+    @Body() dto: MfaLoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.verifyTotpLoginUseCase.execute(dto.mfaChallengeToken, dto.code);
+    res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, COOKIE_OPTIONS);
+    return tokens;
+  }
+
+  @Post('totp/setup')
+  @Version('1')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Inicia configuração do 2FA — retorna URI otpauth para QR code' })
+  async setupTotp(@CurrentUser() user: AuthenticatedUser) {
+    return this.setupTotpUseCase.execute(user.sub);
+  }
+
+  @Post('totp/enable')
+  @Version('1')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirma e ativa o 2FA com o primeiro código válido' })
+  async enableTotp(@CurrentUser() user: AuthenticatedUser, @Body() dto: VerifyTotpDto) {
+    return this.enableTotpUseCase.execute(user.sub, dto.code);
+  }
+
+  @Post('totp/disable')
+  @Version('1')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desativa o 2FA (requer código TOTP atual para confirmar)' })
+  async disableTotp(@CurrentUser() user: AuthenticatedUser, @Body() dto: VerifyTotpDto) {
+    return this.disableTotpUseCase.execute(user.sub, dto.code);
   }
 }

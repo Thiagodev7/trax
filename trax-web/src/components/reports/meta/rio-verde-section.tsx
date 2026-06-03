@@ -59,7 +59,7 @@ export function RioVerdeSection({ data, config }: Props) {
           <div className="w-2.5 h-2.5 rounded-full" style={{ background: data.color }} />
           <div className="text-left">
             <h3 className="text-sm font-semibold">{data.label}</h3>
-            <p className="text-[10px] text-[var(--color-muted-foreground)] mt-0.5">Conta secundária · YTD</p>
+            <p className="text-[10px] text-[var(--color-muted-foreground)] mt-0.5">{data.label} · YTD</p>
           </div>
         </div>
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}

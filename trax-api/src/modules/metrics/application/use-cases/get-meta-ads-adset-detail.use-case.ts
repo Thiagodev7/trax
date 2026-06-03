@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { MetaConfigService } from '@/modules/client/meta-config/meta-config.service';
+import { MetaConfigService } from '@/modules/company/meta-config/meta-config.service';
 import { campaignCodeFromName, detectProduct, detectStates } from '@common/utils/meta-heuristics';
-import { MetaConfigShape, defaultMetaConfig } from '@/modules/client/meta-config/meta-config.template';
+import { MetaConfigShape, defaultMetaConfig } from '@/modules/company/meta-config/meta-config.template';
 
 interface Query {
   agencyId: string;
@@ -39,7 +39,7 @@ export class GetMetaAdsAdsetDetailUseCase {
 
     let config: MetaConfigShape = defaultMetaConfig();
     try {
-      const cfg = await this.metaConfig.getOrCreate(q.agencyId, report.clientId);
+      const cfg = await this.metaConfig.getOrCreate(q.agencyId, report.companyId);
       config = cfg as MetaConfigShape;
     } catch {
       /* ignore */

@@ -7,7 +7,7 @@ import { DeleteAgencyDialog } from './delete-agency-dialog'
 import {
   AgencyDetail,
   AdminUser,
-  AgencyClient,
+  AgencyCompany,
   AgencyIntegration,
   AuditLogEntry,
   PLAN_LABELS,
@@ -19,7 +19,7 @@ import { ActivityLogsTable } from './activity-logs-table'
 const TABS = [
   { id: 'general', label: 'Geral' },
   { id: 'users', label: 'Usuários' },
-  { id: 'clients', label: 'Clientes' },
+  { id: 'companies', label: 'Empresas' },
   { id: 'integrations', label: 'Integrações' },
   { id: 'activity', label: 'Atividade' },
 ] as const
@@ -29,13 +29,13 @@ type TabId = (typeof TABS)[number]['id']
 export function AgencyDetailTabs({
   agency,
   users,
-  clients,
+  companies,
   integrations,
   auditLogs,
 }: {
   agency: AgencyDetail
   users: AdminUser[]
-  clients: AgencyClient[]
+  companies: AgencyCompany[]
   integrations: AgencyIntegration[]
   auditLogs: AuditLogEntry[]
 }) {
@@ -93,7 +93,7 @@ export function AgencyDetailTabs({
                 {agency.recentIntegrationErrors.map((err) => (
                   <div key={err.id} className="text-sm border-b border-red-500/10 pb-3 last:border-0 last:pb-0">
                     <p className="font-medium text-white/80">
-                      {err.provider} — {err.client.name}
+                      {err.provider} — {err.company.name}
                     </p>
                     <p className="text-white/40 text-xs mt-1">{err.lastErrorMsg ?? 'Erro desconhecido'}</p>
                   </div>
@@ -122,11 +122,11 @@ export function AgencyDetailTabs({
         />
       )}
 
-      {tab === 'clients' && (
+      {tab === 'companies' && (
         <DataTable
-          empty="Nenhum cliente nesta agência"
+          empty="Nenhuma empresa nesta agência"
           headers={['Nome', 'E-mail', 'Integrações', 'Relatórios', 'Status']}
-          rows={clients.map((c) => [
+          rows={companies.map((c) => [
             c.name,
             c.email ?? '—',
             String(c._count.integrations),
@@ -139,10 +139,10 @@ export function AgencyDetailTabs({
       {tab === 'integrations' && (
         <DataTable
           empty="Nenhuma integração nesta agência"
-          headers={['Provider', 'Cliente', 'Status', 'Último sync', 'Erro']}
+          headers={['Provider', 'Empresa', 'Status', 'Último sync', 'Erro']}
           rows={integrations.map((i) => [
             i.provider,
-            i.client.name,
+            i.company.name,
             i.status,
             i.lastSyncAt ? new Date(i.lastSyncAt).toLocaleString('pt-BR') : '—',
             i.lastErrorMsg ? i.lastErrorMsg.slice(0, 60) + (i.lastErrorMsg.length > 60 ? '…' : '') : '—',

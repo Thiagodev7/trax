@@ -28,7 +28,7 @@ enum AgencyPlan {
 enum UserRole {
   AGENCY_ADMIN // Administrador da agência (acesso total)
   AGENCY_VIEWER // Visualizador da agência (somente leitura)
-  CLIENT_VIEWER // Visualizador de cliente(s) específico(s)
+  COMPANY_VIEWER // Visualizador de empresa(s) específica(s)
 }
 
 enum IntegrationProvider {
@@ -40,6 +40,7 @@ enum IntegrationProvider {
   INSTAGRAM
   FACEBOOK_PAGE
   NECTAR_CRM
+  RD_STATION
   CUSTOM
 }
 
@@ -72,11 +73,12 @@ enum AuditAction {
   SYNC
   TEST
   INVITE
+  OAUTH_CONNECT
 }
 
 enum AuditEntityType {
   AGENCY
-  CLIENT
+  COMPANY
   USER
   REPORT
   INTEGRATION
@@ -108,7 +110,7 @@ model Agency {
   plan                 AgencyPlan @default(TRIAL)
   stripeCustomerId     String?    @unique @db.VarChar(255)
   stripeSubscriptionId String?    @unique @db.VarChar(255)
-  maxClients           Int        @default(2)
+  maxCompanies         Int        @default(2)
   maxUsers             Int        @default(1)
   trialEndsAt          DateTime?
 
@@ -122,19 +124,19 @@ model Agency {
   updatedAt DateTime @updatedAt
 
   // Relations
-  clients   Client[]
-  users     User[]
-  reports   Report[]
-  auditLogs AgencyAuditLog[]
+  companies   Company[]
+  users       User[]
+  reports     Report[]
+  auditLogs   AgencyAuditLog[]
   scheduledPosts ScheduledPost[]
 
   @@map("agencies")
 }
 
 // ---------------------------------------------------------------------------
-// CLIENT — Clientes da agência. Isolados por agencyId.
+// COMPANY — Empresas da agência. Isoladas por agencyId.
 // ---------------------------------------------------------------------------
-model Client {
+model Company {
   id        String   @id @default(uuid()) @db.Uuid
   agencyId  String   @db.Uuid
   name      String   @db.VarChar(255)
@@ -146,16 +148,16 @@ model Client {
   updatedAt DateTime @updatedAt
 
   // Relations
-  agency       Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  integrations Integration[]
-  reports      Report[]
-  userClients  UserClient[]
+  agency         Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  integrations   Integration[]
+  reports        Report[]
+  userCompanies  UserCompany[]
   scheduledPosts ScheduledPost[]
-  metaConfig   ClientMetaConfig?
+  metaConfig     CompanyMetaConfig?
 
   @@index([agencyId])
   @@index([agencyId, isActive])
-  @@map("clients")
+  @@map("companies")
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +169,8 @@ model User {
   email           String    @db.VarChar(255)
   passwordHash    String    @db.VarChar(255)
   name            String    @db.VarChar(255)
-  role            UserRole  @default(CLIENT_VIEWER)
+  phone           String?   @db.VarChar(20)
+  role            UserRole  @default(COMPANY_VIEWER)
   avatarUrl       String?   @db.VarChar(1024)
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
@@ -175,15 +178,19 @@ model User {
   // Preferências de notificação por e-mail
   notifyReportPublished   Boolean @default(true) @map("notify_report_published")
   notifyIntegrationErrors Boolean @default(true) @map("notify_integration_errors")
-  notifyNewClient         Boolean @default(false) @map("notify_new_client")
+  notifyNewCompany        Boolean @default(false) @map("notify_new_company")
   notifyWeeklySummary     Boolean @default(true) @map("notify_weekly_summary")
+  // 2FA TOTP
+  totpSecret      String?   @db.VarChar(64) @map("totp_secret")
+  totpEnabled     Boolean   @default(false) @map("totp_enabled")
+  totpEnabledAt   DateTime? @map("totp_enabled_at")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Relations
   agency        Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
-  userClients   UserClient[] // Clientes que o usuário pode visualizar
+  userCompanies UserCompany[] // Empresas que o usuário pode visualizar
   auditLogs     AgencyAuditLog[]
 
   // Email único POR AGÊNCIA (não global — mesma pessoa pode ser user em 2 agências)
@@ -194,19 +201,19 @@ model User {
 }
 
 // ---------------------------------------------------------------------------
-// USER_CLIENT — Relação N:N entre User CLIENT_VIEWER e seus clientes visíveis
+// USER_COMPANY — Relação N:N entre User COMPANY_VIEWER e suas empresas visíveis
 // ---------------------------------------------------------------------------
-model UserClient {
-  userId   String @db.Uuid
-  clientId String @db.Uuid
-  agencyId String @db.Uuid // Denormalizado para queries multi-tenant eficientes
+model UserCompany {
+  userId    String @db.Uuid
+  companyId String @db.Uuid
+  agencyId  String @db.Uuid // Denormalizado para queries multi-tenant eficientes
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@id([userId, clientId])
+  @@id([userId, companyId])
   @@index([agencyId, userId])
-  @@map("user_clients")
+  @@map("user_companies")
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +243,7 @@ model RefreshToken {
 model Integration {
   id              String              @id @default(uuid()) @db.Uuid
   agencyId        String              @db.Uuid // Denormalizado para isolamento multi-tenant
-  clientId        String              @db.Uuid
+  companyId       String              @db.Uuid
   provider        IntegrationProvider
   status          IntegrationStatus   @default(PENDING_AUTH)
   displayName     String?             @db.VarChar(255)
@@ -250,19 +257,18 @@ model Integration {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  client       Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   reports      ReportIntegration[]
   dailyMetrics DailyMetric[]
 
-  @@unique([clientId, provider, externalAccount])
-  @@index([agencyId, clientId])
+  @@unique([companyId, provider, externalAccount])
+  @@index([agencyId, companyId])
   @@index([agencyId, status])
   @@map("integrations")
 }
 
 // ---------------------------------------------------------------------------
 // DAILY_METRIC — Cache de métricas por dia por integração
-// Estrutura análoga ao ALL_DATA do Tron dashboard
 // ---------------------------------------------------------------------------
 model DailyMetric {
   id            String   @id @default(uuid()) @db.Uuid
@@ -292,7 +298,7 @@ model DailyMetric {
 model Report {
   id             String       @id @default(uuid()) @db.Uuid
   agencyId       String       @db.Uuid
-  clientId       String       @db.Uuid
+  companyId      String       @db.Uuid
   title          String       @db.VarChar(255)
   description    String?      @db.Text
   status         ReportStatus @default(DRAFT)
@@ -303,17 +309,21 @@ model Report {
   layoutJson     Json? // Configuração dos blocos/widgets do relatório (legado)
   // { enabledTabs: ["META_ADS","ORGANIC","CALENDAR","KPI"], defaultTab: "META_ADS" }
   moduleConfig   Json?
+  // IA Gemini — sumário narrativo e insights gerados após publicação
+  aiSummary      String?      @db.Text @map("ai_summary")
+  aiInsights     Json?        @map("ai_insights")
+  aiGeneratedAt  DateTime?    @map("ai_generated_at")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   publishedAt    DateTime?
 
   agency       Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  client       Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   integrations ReportIntegration[]
 
-  @@index([agencyId, clientId])
+  @@index([agencyId, companyId])
   @@index([agencyId, status])
-  @@index([agencyId, clientId, createdAt(sort: Desc)])
+  @@index([agencyId, companyId, createdAt(sort: Desc)])
   @@index([shareToken])
   @@map("reports")
 }
@@ -395,7 +405,7 @@ enum ScheduledPostPlatform {
 model ScheduledPost {
   id          String               @id @default(uuid()) @db.Uuid
   agencyId    String               @db.Uuid
-  clientId    String               @db.Uuid
+  companyId   String               @db.Uuid
   platform    ScheduledPostPlatform
   caption     String?              @db.Text
   mediaUrl    String               @db.VarChar(1024)
@@ -406,39 +416,41 @@ model ScheduledPost {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
-  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agency  Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@index([agencyId, clientId, status])
+  @@index([agencyId, companyId, status])
   @@index([scheduledAt, status])
   @@map("scheduled_posts")
 }
 
 // ---------------------------------------------------------------------------
-// CLIENT_META_CONFIG — Configuração por cliente para Meta Ads
+// COMPANY_META_CONFIG — Configuração por empresa para Meta Ads
 // (produtos, estados, distribuição UF, thresholds) — substitui hardcode
 // ---------------------------------------------------------------------------
-model ClientMetaConfig {
-  id                   String   @id @default(uuid()) @db.Uuid
-  clientId             String   @unique @db.Uuid
+model CompanyMetaConfig {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @unique @db.Uuid
   // [{ key, label, color, monthlyBudgetTarget, namePatterns: string[] }]
-  products             Json
+  products              Json
   // [{ code, label, aliases: string[] }]
-  states               Json
+  states                Json
   // { [productKey]: { [stateCode]: pct } } — soma 100% por produto
-  stateBudgetByProduct Json
+  stateBudgetByProduct  Json
   // { ctr:{good,warn}, cpc:{warn,bad}, cpm:{warn,bad}, cpl:{warn,bad} }
-  thresholds           Json
+  thresholds            Json
   // Fator multiplicador para alcance estimado (default 0.72)
-  reachFactor          Float    @default(0.72)
-  // Cor da seção secundária (Rio Verde / segunda conta)
-  secondaryAccountColor String  @default("#06B6D4") @db.VarChar(7)
+  reachFactor           Float    @default(0.72)
+  // Cor da seção de conta secundária
+  secondaryAccountColor String   @default("#06B6D4") @db.VarChar(7)
+  // Label da seção de conta secundária (ex: "Filial SP", "Conta Institucional")
+  secondaryAccountLabel String   @default("Conta Secundária") @db.VarChar(100)
   // Janela em dias para sparklines (default 14)
-  sparklineDays        Int      @default(14)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  sparklineDays         Int      @default(14)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@map("client_meta_configs")
+  @@map("company_meta_configs")
 }

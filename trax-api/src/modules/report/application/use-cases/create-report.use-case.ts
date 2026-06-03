@@ -12,12 +12,12 @@ export class CreateReportUseCase {
   ) {}
 
   async execute(agencyId: string, dto: CreateReportDto) {
-    const client = await this.prisma.client.findFirst({
-      where: { id: dto.clientId, agencyId },
+    const company = await this.prisma.company.findFirst({
+      where: { id: dto.companyId, agencyId },
       select: { id: true },
     });
-    if (!client) {
-      throw new BadRequestException('Cliente não encontrado nesta agência');
+    if (!company) {
+      throw new BadRequestException('Empresa não encontrada nesta agência');
     }
 
     if (dto.integrationIds?.length) {
@@ -25,13 +25,13 @@ export class CreateReportUseCase {
         where: {
           id: { in: dto.integrationIds },
           agencyId,
-          clientId: dto.clientId,
+          companyId: dto.companyId,
         },
         select: { id: true },
       });
       if (integrations.length !== dto.integrationIds.length) {
         throw new BadRequestException(
-          'Uma ou mais integrações inválidas ou não pertencem a este cliente',
+          'Uma ou mais integrações inválidas ou não pertencem a esta empresa',
         );
       }
     }
@@ -39,7 +39,7 @@ export class CreateReportUseCase {
     const report = await this.prisma.report.create({
       data: {
         agencyId,
-        clientId: dto.clientId,
+        companyId: dto.companyId,
         title: dto.title,
         description: dto.description,
         periodStart: dto.periodStart ? new Date(dto.periodStart) : undefined,
@@ -56,7 +56,7 @@ export class CreateReportUseCase {
         id: true,
         title: true,
         status: true,
-        clientId: true,
+        companyId: true,
         agencyId: true,
         createdAt: true,
       },

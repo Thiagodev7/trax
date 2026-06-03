@@ -23,7 +23,7 @@ export const PLAN_COLORS: Record<string, string> = {
 export const ROLE_LABELS: Record<string, string> = {
   AGENCY_ADMIN: 'Admin da Agência',
   AGENCY_VIEWER: 'Visualizador',
-  CLIENT_VIEWER: 'Cliente',
+  COMPANY_VIEWER: 'Empresa',
 }
 
 export const BASE_DOMAIN = getBaseDomain()
@@ -34,7 +34,7 @@ export interface PlatformStats {
   inactiveAgencies: number
   totalUsers: number
   activeUsers: number
-  totalClients: number
+  totalCompanies: number
   totalReports: number
   trialsExpiringSoon: number
   expiredTrials: number
@@ -50,11 +50,11 @@ export interface PlatformStats {
     plan: string
     createdAt: string
   }>
-  topAgenciesByClients: Array<{
+  topAgenciesByCompanies: Array<{
     id: string
     name: string
     slug: string
-    clientCount: number
+    companyCount: number
   }>
 }
 
@@ -71,11 +71,11 @@ export interface AgencyListItem {
   slug: string
   plan: string
   isActive: boolean
-  maxClients: number
+  maxCompanies: number
   maxUsers: number
   trialEndsAt: string | null
   createdAt: string
-  _count: { clients: number; users: number; reports: number }
+  _count: { companies: number; users: number; reports: number }
 }
 
 export interface AgencyDetail extends AgencyListItem {
@@ -86,14 +86,14 @@ export interface AgencyDetail extends AgencyListItem {
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   updatedAt: string
-  _count: { clients: number; users: number; reports: number; integrations: number }
+  _count: { companies: number; users: number; reports: number; integrations: number }
   recentIntegrationErrors: Array<{
     id: string
     provider: string
     displayName: string | null
     lastErrorMsg: string | null
     updatedAt: string
-    client: { id: string; name: string }
+    company: { id: string; name: string }
   }>
 }
 
@@ -124,7 +124,7 @@ export interface SuperAdminProfile {
   createdAt: string
 }
 
-export interface AgencyClient {
+export interface AgencyCompany {
   id: string
   name: string
   email: string | null
@@ -143,12 +143,12 @@ export interface AgencyIntegration {
   lastSyncAt: string | null
   lastErrorMsg: string | null
   updatedAt: string
-  client: { id: string; name: string }
+  company: { id: string; name: string }
 }
 
 export interface DeletePreview {
   agency: { id: string; name: string; slug: string }
-  counts: { users: number; clients: number; reports: number; integrations: number }
+  counts: { users: number; companies: number; reports: number; integrations: number }
 }
 
 export interface AuditLogEntry {
@@ -183,7 +183,7 @@ export const ACTION_LABELS: Record<string, string> = {
 
 export const ENTITY_LABELS: Record<string, string> = {
   AGENCY: 'Agência',
-  CLIENT: 'Cliente',
+  COMPANY: 'Empresa',
   USER: 'Usuário',
   REPORT: 'Relatório',
   INTEGRATION: 'Integração',
@@ -265,8 +265,8 @@ export async function adminGetAgencyUsers(id: string, page = 1) {
   )
 }
 
-export async function adminGetAgencyClients(id: string) {
-  return serverFetch<AgencyClient[]>(`/agencies/${id}/clients`)
+export async function adminGetAgencyCompanies(id: string) {
+  return serverFetch<AgencyCompany[]>(`/agencies/${id}/companies`)
 }
 
 export async function adminGetAgencyIntegrations(id: string) {

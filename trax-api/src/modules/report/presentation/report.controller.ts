@@ -43,17 +43,17 @@ export class ReportController {
   @Get()
   @Version('1')
   @ApiOperation({ summary: 'Lista relatórios acessíveis pelo usuário logado' })
-  @ApiQuery({ name: 'clientId', required: false, type: String })
+  @ApiQuery({ name: 'companyId', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async findAll(
     @CurrentTenant('agencyId') agencyId: string,
     @CurrentUser() user: AuthenticatedUser,
-    @Query('clientId') clientId?: string,
+    @Query('companyId') companyId?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return this.listReports.execute({ agencyId, user, clientId, page, limit });
+    return this.listReports.execute({ agencyId, user, companyId, page, limit });
   }
 
   @ApiBearerAuth()

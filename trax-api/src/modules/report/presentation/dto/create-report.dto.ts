@@ -16,9 +16,9 @@ export class CreateReportDto {
   @MaxLength(255)
   title: string;
 
-  @ApiProperty({ example: 'uuid-do-cliente', description: 'ID do cliente' })
+  @ApiProperty({ example: 'uuid-da-empresa', description: 'ID da empresa' })
   @IsUUID()
-  clientId: string;
+  companyId: string;
 
   @ApiPropertyOptional({ example: 'Visão geral da performance do mês.' })
   @IsOptional()

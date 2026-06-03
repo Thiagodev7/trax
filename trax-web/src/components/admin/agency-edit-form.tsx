@@ -22,7 +22,7 @@ export function AgencyEditForm({ agency }: { agency: AgencyDetail }) {
   const [secondaryColor, setSecondaryColor] = useState(agency.secondaryColor)
   const [plan, setPlan] = useState(agency.plan)
   const [isActive, setIsActive] = useState(agency.isActive)
-  const [maxClients, setMaxClients] = useState(agency.maxClients)
+  const [maxCompanies, setMaxCompanies] = useState(agency.maxCompanies)
   const [maxUsers, setMaxUsers] = useState(agency.maxUsers)
   const [trialEndsAt, setTrialEndsAt] = useState(
     agency.trialEndsAt ? agency.trialEndsAt.slice(0, 10) : '',
@@ -40,7 +40,7 @@ export function AgencyEditForm({ agency }: { agency: AgencyDetail }) {
         secondaryColor,
         plan,
         isActive,
-        maxClients,
+        maxCompanies,
         maxUsers,
         trialEndsAt: trialEndsAt || null,
       })
@@ -90,7 +90,7 @@ export function AgencyEditForm({ agency }: { agency: AgencyDetail }) {
           <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Trial até</label>
           <input type="date" value={trialEndsAt} onChange={(e) => setTrialEndsAt(e.target.value)} className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white" />
         </div>
-        <Field label="Limite de clientes" type="number" value={String(maxClients)} onChange={(v) => setMaxClients(Number(v))} />
+        <Field label="Limite de empresas" type="number" value={String(maxCompanies)} onChange={(v) => setMaxCompanies(Number(v))} />
         <Field label="Limite de usuários" type="number" value={String(maxUsers)} onChange={(v) => setMaxUsers(Number(v))} />
         <div>
           <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Status</label>

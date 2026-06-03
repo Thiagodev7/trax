@@ -12,7 +12,16 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-export type TabKey = 'META_ADS' | 'ORGANIC' | 'CALENDAR' | 'KPI' | 'GOOGLE_ADS' | 'LINKEDIN_ADS'
+export type TabKey =
+  | 'META_ADS'
+  | 'ORGANIC'
+  | 'CALENDAR'
+  | 'KPI'
+  | 'GOOGLE_ADS'
+  | 'LINKEDIN_ADS'
+  | 'RD_STATION'
+  | 'NECTAR_CRM'
+  | 'MARKETING_FUNNEL'
 
 interface TabConfig {
   key: TabKey
@@ -49,7 +58,28 @@ const TAB_CONFIGS: TabConfig[] = [
     label: 'KPIs / CRM',
     icon: TrendingUp,
     description: 'Pipeline de vendas, receita, CAC, ROAS e LTV',
+    requiresProvider: ['NECTAR_CRM', 'RD_STATION'],
+  },
+  {
+    key: 'RD_STATION',
+    label: 'RD Station',
+    icon: TrendingUp,
+    description: 'Leads, funil de qualificação, top formulários e CPL cruzado',
+    requiresProvider: ['RD_STATION'],
+  },
+  {
+    key: 'NECTAR_CRM',
+    label: 'Nectar CRM',
+    icon: TrendingUp,
+    description: 'Pipeline, receita, histórico mensal e CPL cruzado',
     requiresProvider: ['NECTAR_CRM'],
+  },
+  {
+    key: 'MARKETING_FUNNEL',
+    label: 'Funil Marketing',
+    icon: BarChart3,
+    description: 'Funil unificado Meta + Google + RD + Nectar com CPL e ROAS',
+    requiresProvider: ['META_ADS', 'GOOGLE_ADS', 'RD_STATION', 'NECTAR_CRM'],
   },
   {
     key: 'GOOGLE_ADS',
@@ -87,10 +117,10 @@ interface Report {
   periodEnd: string | null
   moduleConfig: { enabledTabs: TabKey[]; defaultTab?: TabKey } | null
   integrations: ReportIntegration[]
-  client: { id: string; name: string }
+  company: { id: string; name: string }
 }
 
-interface ClientIntegration {
+interface CompanyIntegration {
   id: string
   provider: string
   displayName: string | null
@@ -100,10 +130,10 @@ interface ClientIntegration {
 
 interface Props {
   report: Report
-  clientIntegrations: ClientIntegration[]
+  companyIntegrations: CompanyIntegration[]
 }
 
-export function ReportBuilder({ report, clientIntegrations }: Props) {
+export function ReportBuilder({ report, companyIntegrations }: Props) {
   const router = useRouter()
   const api = useApiClient()
   const [isPending, startTransition] = useTransition()
@@ -124,7 +154,7 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
   const currentIntegrationIds = report.integrations.map((ri) => ri.integration.id)
   const [selectedIntegrationIds, setSelectedIntegrationIds] = useState<string[]>(currentIntegrationIds)
 
-  const activeProviders = clientIntegrations
+  const activeProviders = companyIntegrations
     .filter((ci) => selectedIntegrationIds.includes(ci.id))
     .map((ci) => ci.provider)
 
@@ -170,6 +200,7 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
     GOOGLE_ANALYTICS: '📈',
     TIKTOK_ADS: '🎵',
     LINKEDIN_ADS: '💼',
+    RD_STATION: '🚀',
     CUSTOM: '⚡',
   }
 
@@ -182,6 +213,7 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
     GOOGLE_ANALYTICS: 'Google Analytics',
     TIKTOK_ADS: 'TikTok Ads',
     LINKEDIN_ADS: 'LinkedIn Ads',
+    RD_STATION: 'RD Station',
     CUSTOM: 'Personalizado',
   }
 
@@ -196,7 +228,7 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <p className="text-sm text-[var(--color-muted-foreground)]">{report.client.name}</p>
+          <p className="text-sm text-[var(--color-muted-foreground)]">{report.company.name}</p>
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">
             Editar Relatório
           </h2>
@@ -264,23 +296,23 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
             Integrações Vinculadas
           </h3>
           <Link
-            href={`/clients/${report.client.id}/integrations`}
+            href={`/companies/${report.company.id}/integrations`}
             className="text-xs text-[var(--color-primary)] hover:underline"
           >
             Gerenciar integrações →
           </Link>
         </div>
 
-        {clientIntegrations.length === 0 ? (
+        {companyIntegrations.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)] text-center py-4">
-            Nenhuma integração configurada para este cliente.{' '}
-            <Link href={`/clients/${report.client.id}/integrations`} className="text-[var(--color-primary)] hover:underline">
+            Nenhuma integração configurada para esta empresa.{' '}
+            <Link href={`/companies/${report.company.id}/integrations`} className="text-[var(--color-primary)] hover:underline">
               Adicionar agora
             </Link>
           </p>
         ) : (
           <div className="space-y-2">
-            {clientIntegrations.map((ci) => {
+            {companyIntegrations.map((ci) => {
               const selected = selectedIntegrationIds.includes(ci.id)
               const isActive = ci.status === 'ACTIVE'
               return (
@@ -324,7 +356,7 @@ export function ReportBuilder({ report, clientIntegrations }: Props) {
           Tabs Habilitadas
         </h3>
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          Selecione quais seções serão exibidas no relatório do cliente.
+          Selecione quais seções serão exibidas no relatório da empresa.
         </p>
         <div className="space-y-2">
           {TAB_CONFIGS.map((tab) => {

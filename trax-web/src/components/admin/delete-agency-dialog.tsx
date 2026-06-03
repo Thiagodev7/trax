@@ -82,7 +82,7 @@ export function DeleteAgencyDialog({
                 <p className="text-sm text-red-300 mb-3">Esta ação é irreversível. Serão removidos:</p>
                 <ul className="space-y-1.5 text-sm text-white/60">
                   <li>{preview.counts.users} usuário(s)</li>
-                  <li>{preview.counts.clients} cliente(s)</li>
+                  <li>{preview.counts.companies} empresa(s)</li>
                   <li>{preview.counts.reports} relatório(s)</li>
                   <li>{preview.counts.integrations} integração(ões)</li>
                 </ul>

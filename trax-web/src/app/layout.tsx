@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: `Portal de relatórios de marketing — ${tenant.name}`,
     icons: {
-      icon: tenant.branding.faviconUrl ?? '/favicon.ico',
+      icon: tenant.branding.faviconUrl?.trim() || '/favicon.ico',
     },
   }
 }

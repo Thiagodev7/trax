@@ -3,7 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { ScheduledPostPlatform, ScheduledPostStatus } from '@prisma/client';
 
 interface CreateScheduledPostDto {
-  clientId: string;
+  companyId: string;
   platform: 'instagram' | 'facebook';
   caption?: string;
   mediaUrl: string;
@@ -14,18 +14,18 @@ interface CreateScheduledPostDto {
 export class SchedulingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(agencyId: string, clientId: string) {
+  async list(agencyId: string, companyId: string) {
     return this.prisma.scheduledPost.findMany({
-      where: { agencyId, clientId },
+      where: { agencyId, companyId },
       orderBy: { scheduledAt: 'asc' },
     });
   }
 
   async create(agencyId: string, dto: CreateScheduledPostDto) {
-    const client = await this.prisma.client.findFirst({
-      where: { id: dto.clientId, agencyId },
+    const company = await this.prisma.company.findFirst({
+      where: { id: dto.companyId, agencyId },
     });
-    if (!client) throw new NotFoundException('Cliente não encontrado.');
+    if (!company) throw new NotFoundException('Empresa não encontrada.');
 
     const scheduledAt = new Date(dto.scheduledAt);
     if (Number.isNaN(scheduledAt.getTime())) {
@@ -35,7 +35,7 @@ export class SchedulingService {
     return this.prisma.scheduledPost.create({
       data: {
         agencyId,
-        clientId: dto.clientId,
+        companyId: dto.companyId,
         platform:
           dto.platform === 'instagram'
             ? ScheduledPostPlatform.INSTAGRAM

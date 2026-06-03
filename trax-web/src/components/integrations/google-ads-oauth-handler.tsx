@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useApiClient } from '@/lib/api-client-browser'
 import { toast } from 'sonner'
 import type { Integration } from './integration-list'
 
 interface Props {
-  clientId: string
+  companyId: string
   onIntegrationAdded: (integration: Integration) => void
 }
 
-export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
+export function GoogleAdsOAuthHandler({ companyId, onIntegrationAdded }: Props) {
   const searchParams = useSearchParams()
+  const { status } = useSession()
   const api = useApiClient()
   const [open, setOpen] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -21,14 +23,16 @@ export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingLoad, setPendingLoad] = useState<string | null>(null)
 
+  // Detecta o redirect do Google OAuth nos search params
   useEffect(() => {
     const oauth = searchParams.get('google_oauth')
     const pid = searchParams.get('pendingId')
     if (oauth === 'pending' && pid) {
       setPendingId(pid)
       setOpen(true)
-      loadCustomers(pid)
+      setPendingLoad(pid)
       window.history.replaceState({}, '', window.location.pathname)
     } else if (oauth === 'error') {
       toast.error(searchParams.get('message') || 'Erro na conexão Google')
@@ -36,11 +40,19 @@ export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     }
   }, [searchParams])
 
+  // Só carrega as contas quando a sessão estiver autenticada
+  useEffect(() => {
+    if (pendingLoad && status === 'authenticated') {
+      loadCustomers(pendingLoad)
+      setPendingLoad(null)
+    }
+  }, [pendingLoad, status])
+
   async function loadCustomers(pid: string) {
     setLoading(true)
     try {
       const list = await api.get<Array<{ id: string; formatted: string }>>(
-        `/clients/${clientId}/integrations/google-ads/customers?pendingId=${pid}`,
+        `/companies/${companyId}/integrations/google-ads/customers?pendingId=${pid}`,
       )
       setCustomers(list)
       if (list.length === 1) setSelectedCustomer(list[0].id)
@@ -52,12 +64,13 @@ export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     }
   }
 
+
   async function handleFinalize() {
     if (!pendingId || !selectedCustomer) return
     setLoading(true)
     try {
       const integration = await api.post<Integration>(
-        `/clients/${clientId}/integrations/google-ads/finalize`,
+        `/companies/${companyId}/integrations/google-ads/finalize`,
         {
           pendingId,
           customerId: selectedCustomer,

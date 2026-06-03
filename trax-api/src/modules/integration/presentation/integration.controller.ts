@@ -33,6 +33,19 @@ import {
   GoogleAdsOAuthCallbackUseCase,
 } from '../application/use-cases/google-ads-oauth.use-cases';
 import { FinalizeGoogleAdsDto } from './dto/finalize-google-ads.dto';
+import {
+  ConnectMetaUseCase,
+  MetaOAuthCallbackUseCase,
+  ListMetaAdAccountsUseCase,
+  ListMetaPagesUseCase,
+  FinalizeMetaOAuthUseCase,
+} from '../application/use-cases/meta-oauth.use-cases';
+import { FinalizeMetaDto } from './dto/finalize-meta.dto';
+import {
+  ConnectRdStationUseCase,
+  RdStationCallbackUseCase,
+  FinalizeRdStationUseCase,
+} from '../application/use-cases/rd-station-oauth.use-cases';
 
 @ApiBearerAuth()
 @ApiTags('Integrations')
@@ -45,23 +58,34 @@ export class IntegrationController {
     private readonly deleteIntegration: DeleteIntegrationUseCase,
     private readonly syncIntegration: SyncIntegrationUseCase,
     private readonly testIntegration: TestIntegrationUseCase,
+    // Google Ads OAuth
     private readonly connectGoogleAds: ConnectGoogleAdsUseCase,
     private readonly listGoogleAdsCustomers: ListGoogleAdsCustomersUseCase,
     private readonly finalizeGoogleAds: FinalizeGoogleAdsOAuthUseCase,
     private readonly googleAdsCallback: GoogleAdsOAuthCallbackUseCase,
+    // Meta OAuth
+    private readonly connectMeta: ConnectMetaUseCase,
+    private readonly metaCallback: MetaOAuthCallbackUseCase,
+    private readonly listMetaAdAccounts: ListMetaAdAccountsUseCase,
+    private readonly listMetaPages: ListMetaPagesUseCase,
+    private readonly finalizeMeta: FinalizeMetaOAuthUseCase,
+    // RD Station OAuth
+    private readonly connectRdStation: ConnectRdStationUseCase,
+    private readonly rdStationCallback: RdStationCallbackUseCase,
+    private readonly finalizeRdStation: FinalizeRdStationUseCase,
   ) {}
 
-  @Get('clients/:clientId/integrations/google-ads/connect')
+  @Get('companies/:companyId/integrations/google-ads/connect')
   @Version('1')
   @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
   @ApiOperation({ summary: 'Inicia OAuth do Google Ads' })
   @ApiQuery({ name: 'returnUrl', required: false, type: String })
   connectGoogle(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Query('returnUrl') returnUrl?: string,
   ) {
-    return this.connectGoogleAds.execute(agencyId, clientId, returnUrl);
+    return this.connectGoogleAds.execute(agencyId, companyId, returnUrl);
   }
 
   @Get('integrations/google-ads/callback')
@@ -78,58 +102,173 @@ export class IntegrationController {
     return res.redirect(redirectUrl);
   }
 
-  @Get('clients/:clientId/integrations/google-ads/customers')
+  @Get('companies/:companyId/integrations/google-ads/customers')
   @Version('1')
   @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
   @ApiOperation({ summary: 'Lista contas Google Ads acessíveis (pós-OAuth)' })
   @ApiQuery({ name: 'pendingId', required: true, type: String })
   listGoogleCustomers(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Query('pendingId') pendingId: string,
   ) {
-    return this.listGoogleAdsCustomers.execute(agencyId, clientId, pendingId);
+    return this.listGoogleAdsCustomers.execute(agencyId, companyId, pendingId);
   }
 
-  @Post('clients/:clientId/integrations/google-ads/finalize')
+  @Post('companies/:companyId/integrations/google-ads/finalize')
   @Version('1')
   @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Finaliza OAuth e cria integração Google Ads' })
   finalizeGoogle(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Body() dto: FinalizeGoogleAdsDto,
   ) {
     return this.finalizeGoogleAds.execute(
       agencyId,
-      clientId,
+      companyId,
       dto.pendingId,
       dto.customerId,
       dto.displayName,
     );
   }
 
-  @Get('clients/:clientId/integrations')
+  // ── Meta OAuth ──────────────────────────────────────────────────────────────
+
+  @Get('companies/:companyId/integrations/meta/connect')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @ApiOperation({ summary: 'Inicia OAuth do Meta (Ads + Instagram + Facebook Page)' })
+  @ApiQuery({ name: 'scopeGroup', required: false, enum: ['ads', 'pages', 'instagram', 'all'] })
+  @ApiQuery({ name: 'returnUrl', required: false, type: String })
+  connectMetaOAuth(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query('scopeGroup') scopeGroup: 'ads' | 'pages' | 'instagram' | 'all' = 'ads',
+    @Query('returnUrl') returnUrl?: string,
+  ) {
+    return this.connectMeta.execute(agencyId, companyId, scopeGroup, returnUrl);
+  }
+
+  @Get('integrations/meta/callback')
+  @Version('1')
+  @Public()
+  @ApiOperation({ summary: 'Callback OAuth Meta (público)' })
+  async metaOAuthCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Res() res: Response,
+  ) {
+    const redirectUrl = await this.metaCallback.execute(code, state, error);
+    return res.redirect(redirectUrl);
+  }
+
+  @Get('companies/:companyId/integrations/meta/ad-accounts')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @ApiOperation({ summary: 'Lista Ad Accounts Meta acessíveis (pós-OAuth)' })
+  @ApiQuery({ name: 'pendingId', required: true })
+  listMetaAdAccountsRoute(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query('pendingId') pendingId: string,
+  ) {
+    return this.listMetaAdAccounts.execute(agencyId, companyId, pendingId);
+  }
+
+  @Get('companies/:companyId/integrations/meta/pages')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @ApiOperation({ summary: 'Lista Páginas Facebook (Instagram / Facebook Page) (pós-OAuth)' })
+  @ApiQuery({ name: 'pendingId', required: true })
+  listMetaPagesRoute(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query('pendingId') pendingId: string,
+  ) {
+    return this.listMetaPages.execute(agencyId, companyId, pendingId);
+  }
+
+  @Post('companies/:companyId/integrations/meta/finalize')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Finaliza OAuth e cria integração Meta (Ads / Instagram / Facebook Page)' })
+  finalizeMetaOAuth(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Body() dto: FinalizeMetaDto,
+  ) {
+    return this.finalizeMeta.execute(agencyId, companyId, dto);
+  }
+
+  // ── RD Station OAuth ─────────────────────────────────────────────────────
+
+  @Get('companies/:companyId/integrations/rd-station/connect')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @ApiOperation({ summary: 'Inicia OAuth do RD Station Marketing' })
+  @ApiQuery({ name: 'returnUrl', required: false, type: String })
+  connectRdStationOAuth(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query('returnUrl') returnUrl?: string,
+  ) {
+    return this.connectRdStation.execute(agencyId, companyId, returnUrl);
+  }
+
+  @Get('integrations/rd-station/callback')
+  @Version('1')
+  @Public()
+  @ApiOperation({ summary: 'Callback OAuth RD Station (público)' })
+  async rdStationOAuthCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Res() res: Response,
+  ) {
+    const redirectUrl = await this.rdStationCallback.execute(code, state, error);
+    return res.redirect(redirectUrl);
+  }
+
+  @Post('companies/:companyId/integrations/rd-station/finalize')
+  @Version('1')
+  @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Finaliza OAuth e cria integração RD Station' })
+  finalizeRdStationOAuth(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query('pendingId') pendingId: string,
+    @Query('displayName') displayName?: string,
+  ) {
+    return this.finalizeRdStation.execute(agencyId, companyId, pendingId, displayName);
+  }
+
+  // ── Generic CRUD ────────────────────────────────────────────────────────────
+
+  @Get('companies/:companyId/integrations')
   @Version('1')
   @ApiOperation({ summary: 'Lista integrações de um cliente' })
   async findAll(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
   ) {
-    return this.listIntegrations.execute(agencyId, clientId);
+    return this.listIntegrations.execute(agencyId, companyId);
   }
 
-  @Post('clients/:clientId/integrations')
+  @Post('companies/:companyId/integrations')
   @Version('1')
   @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
   @ApiOperation({ summary: 'Cria integração para um cliente' })
   async create(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Body() dto: CreateIntegrationDto,
   ) {
-    return this.createIntegration.execute(agencyId, clientId, dto);
+    return this.createIntegration.execute(agencyId, companyId, dto);
   }
 
   @Patch('integrations/:id')

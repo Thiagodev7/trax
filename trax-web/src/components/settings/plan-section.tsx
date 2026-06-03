@@ -8,12 +8,12 @@ import { toast } from 'sonner'
 interface AgencyPlanData {
   plan: string
   planLabel: string
-  maxClients: number
+  maxCompanies: number
   maxUsers: number
   trialEndsAt: string | null
   billingConfigured: boolean
   usage: {
-    clients: number
+    companies: number
     users: number
     integrations: number
   }
@@ -83,10 +83,10 @@ export function PlanSection() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-[var(--color-border)]">
           <div>
             <p className="text-xs text-[var(--color-muted-foreground)] uppercase tracking-wider font-semibold">
-              Clientes ativos
+              Empresas ativas
             </p>
             <p className="text-2xl font-bold text-[var(--color-foreground)] mt-1">
-              {formatLimit(data.usage.clients, data.maxClients)}
+              {formatLimit(data.usage.companies, data.maxCompanies)}
             </p>
           </div>
           <div>

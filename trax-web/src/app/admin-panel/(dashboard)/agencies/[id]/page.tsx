@@ -14,7 +14,7 @@ import { AgencyDetailTabs } from '@/components/admin/agency-detail-tabs'
 import {
   adminGetAgency,
   adminGetAgencyUsers,
-  adminGetAgencyClients,
+  adminGetAgencyCompanies,
   adminGetAgencyIntegrations,
   adminGetAgencyAuditLogs,
   PLAN_LABELS,
@@ -28,10 +28,10 @@ export default async function AgencyDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [agency, usersResult, clients, integrations, auditLogsResult] = await Promise.all([
+  const [agency, usersResult, companies, integrations, auditLogsResult] = await Promise.all([
     adminGetAgency(id),
     adminGetAgencyUsers(id),
-    adminGetAgencyClients(id),
+    adminGetAgencyCompanies(id),
     adminGetAgencyIntegrations(id),
     adminGetAgencyAuditLogs(id),
   ])
@@ -39,7 +39,7 @@ export default async function AgencyDetailPage({
   if (!agency) notFound()
 
   const stats = [
-    { label: 'Clientes', value: agency._count?.clients ?? 0, max: agency.maxClients, icon: Activity },
+    { label: 'Empresas', value: agency._count?.companies ?? 0, max: agency.maxCompanies, icon: Activity },
     { label: 'Usuários', value: agency._count?.users ?? 0, max: agency.maxUsers, icon: Users },
     { label: 'Relatórios', value: agency._count?.reports ?? 0, max: null, icon: FileText },
     { label: 'Integrações', value: agency._count?.integrations ?? 0, max: null, icon: Plug },
@@ -111,7 +111,7 @@ export default async function AgencyDetailPage({
       <AgencyDetailTabs
         agency={agency}
         users={usersResult?.data ?? []}
-        clients={clients ?? []}
+        companies={companies ?? []}
         integrations={integrations ?? []}
         auditLogs={auditLogsResult?.data ?? []}
       />

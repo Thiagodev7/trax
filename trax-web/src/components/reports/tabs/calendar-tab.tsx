@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Heart, MessageCircle, BookOpen } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { useSharedApiClient } from '@/lib/shared-api-client'
 import { reportMetricsPath } from '@/lib/report-metrics-path'
@@ -33,7 +34,7 @@ interface Props {
   periodEnd?: string
   selectedDate?: string | null
   onSelectDate?: (date: string | null) => void
-  clientId?: string
+  companyId?: string
   shareToken?: string
 }
 
@@ -48,7 +49,8 @@ const PLATFORM_COLORS: Record<string, string> = {
   facebook: 'bg-blue-500/20 border-blue-500/40 text-blue-400',
 }
 
-export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, clientId, shareToken }: Props) {
+export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, companyId, shareToken }: Props) {
+  const { status: sessionStatus } = useSession()
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -79,7 +81,19 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
     }
   }, [api, reportId, shareToken, periodStart, periodEnd])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (shareToken) {
+      fetchData()
+      return
+    }
+    if (sessionStatus === 'loading') return
+    if (sessionStatus === 'unauthenticated') {
+      setLoading(false)
+      setError('Sessão expirada. Faça login novamente.')
+      return
+    }
+    fetchData()
+  }, [fetchData, shareToken, sessionStatus])
 
   if (loading) {
     return <div className="card p-10 border-[var(--color-border)] animate-pulse h-96" />
@@ -238,7 +252,7 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
             </div>
           )}
         </div>
-        {clientId && <SchedulePostsPanel clientId={clientId} />}
+        {companyId && <SchedulePostsPanel companyId={companyId} />}
       </div>
 
       {/* Post detail modal */}
@@ -262,8 +276,8 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
             <div className="flex items-center gap-4 text-sm text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1"><Heart className="w-4 h-4" /> {String(selectedPost.likeCount ?? 0)}</span>
               <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" /> {String(selectedPost.commentsCount ?? 0)}</span>
-              {selectedPost.permalink != null && (
-                <a href={String(selectedPost.permalink)} target="_blank" rel="noreferrer" className="ml-auto text-[var(--color-primary)] hover:underline text-xs">
+              {selectedPost.permalink != null && String(selectedPost.permalink).trim() !== '' && (
+                <a href={String(selectedPost.permalink).trim()} target="_blank" rel="noreferrer" className="ml-auto text-[var(--color-primary)] hover:underline text-xs">
                   Ver post →
                 </a>
               )}
