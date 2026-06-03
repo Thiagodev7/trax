@@ -262,8 +262,8 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
             <div className="flex items-center gap-4 text-sm text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1"><Heart className="w-4 h-4" /> {String(selectedPost.likeCount ?? 0)}</span>
               <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" /> {String(selectedPost.commentsCount ?? 0)}</span>
-              {selectedPost.permalink != null && (
-                <a href={String(selectedPost.permalink)} target="_blank" rel="noreferrer" className="ml-auto text-[var(--color-primary)] hover:underline text-xs">
+              {selectedPost.permalink != null && String(selectedPost.permalink).trim() !== '' && (
+                <a href={String(selectedPost.permalink).trim()} target="_blank" rel="noreferrer" className="ml-auto text-[var(--color-primary)] hover:underline text-xs">
                   Ver post →
                 </a>
               )}

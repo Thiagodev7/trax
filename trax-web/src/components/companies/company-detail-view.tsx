@@ -91,8 +91,8 @@ export function CompanyDetailView({ client, integrations, reports }: Props) {
                     {client.email}
                   </span>
                 )}
-                {client.website && (
-                  <a href={client.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+                {client.website?.trim() && (
+                  <a href={client.website.trim()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
                     <Globe className="w-3.5 h-3.5" />
                     {client.website.replace(/^https?:\/\//, '')}
                   </a>

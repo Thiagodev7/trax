@@ -104,24 +104,28 @@ export default async function DashboardPage() {
     }))
 
   const activities = [
-    ...companies.map((c) => ({
-      id: `company-${c.id}`,
-      type: 'COMPANY' as const,
-      title: 'Nova empresa cadastrada',
-      subtitle: c.name,
-      date: new Date(c.createdAt),
-      link: `/companies/${c.id}`,
-      status: c.isActive ? 'Ativo' : 'Inativo',
-    })),
-    ...reports.map((r) => ({
-      id: `report-${r.id}`,
-      type: 'REPORT' as const,
-      title: 'Relatório gerado',
-      subtitle: r.title,
-      date: new Date(r.createdAt),
-      link: `/reports/${r.id}`,
-      status: r.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho',
-    })),
+    ...companies
+      .filter((c) => c.id)
+      .map((c) => ({
+        id: `company-${c.id}`,
+        type: 'COMPANY' as const,
+        title: 'Nova empresa cadastrada',
+        subtitle: c.name,
+        date: new Date(c.createdAt),
+        link: `/companies/${c.id}`,
+        status: c.isActive ? 'Ativo' : 'Inativo',
+      })),
+    ...reports
+      .filter((r) => r.id)
+      .map((r) => ({
+        id: `report-${r.id}`,
+        type: 'REPORT' as const,
+        title: 'Relatório gerado',
+        subtitle: r.title,
+        date: new Date(r.createdAt),
+        link: `/reports/${r.id}`,
+        status: r.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho',
+      })),
   ]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 8)

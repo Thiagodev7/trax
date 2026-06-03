@@ -87,8 +87,8 @@ function ProfileCard({ profile, platform }: { profile: Profile; platform: 'insta
 function PostCard({ post }: { post: Post }) {
   return (
     <div className="rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
-      {post.thumbnailUrl ? (
-        <a href={post.permalink} target="_blank" rel="noreferrer">
+      {post.thumbnailUrl && post.permalink?.trim() ? (
+        <a href={post.permalink.trim()} target="_blank" rel="noreferrer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={post.thumbnailUrl} alt="" className="w-full aspect-square object-cover" />
         </a>

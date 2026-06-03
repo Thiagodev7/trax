@@ -72,9 +72,9 @@ export function CreativeDetailModal({ creative, config, onClose }: Props) {
             </div>
           </div>
 
-          {creative.permalink && (
+          {creative.permalink?.trim() && (
             <a
-              href={creative.permalink}
+              href={creative.permalink.trim()}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-[var(--color-primary)] hover:underline"

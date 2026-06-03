@@ -45,8 +45,9 @@ function getPageRange(current: number, total: number): (number | 'ellipsis')[] {
 export function Pagination({ page, totalPages, basePath, searchParams }: PaginationProps) {
   if (totalPages <= 1) return null
 
+  const path = basePath?.trim() || '/'
   const pages = getPageRange(page, totalPages)
-  const href = (p: number) => buildPageUrl(basePath, p, searchParams)
+  const href = (p: number) => buildPageUrl(path, p, searchParams)
 
   return (
     <nav className="flex items-center justify-center gap-1 py-4" aria-label="Paginação">

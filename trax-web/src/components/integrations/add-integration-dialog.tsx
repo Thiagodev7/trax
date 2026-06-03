@@ -306,10 +306,10 @@ export function AddIntegrationDialog({ companyId, onAdded }: Props) {
                     </ol>
                     {selectedProvider.guide.links && selectedProvider.guide.links.length > 0 && (
                       <div className="flex flex-wrap gap-3 mt-2">
-                        {selectedProvider.guide.links.map((link, idx) => (
+                        {selectedProvider.guide.links.filter((l) => l.url?.trim()).map((link, idx) => (
                           <a
                             key={idx}
-                            href={link.url}
+                            href={link.url.trim()}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors"

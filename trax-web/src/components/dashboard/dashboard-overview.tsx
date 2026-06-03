@@ -193,12 +193,12 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                   bgClass = 'bg-violet-500/10 text-violet-400';
                 }
 
-                return (
-                  <Link
-                    key={activity.id}
-                    href={activity.link}
-                    className="flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-2)] transition-colors group"
-                  >
+                const href = activity.link?.trim()
+                const rowClass =
+                  'flex items-start gap-4 px-5 py-4 hover:bg-[var(--color-surface-2)] transition-colors group'
+
+                const rowContent = (
+                  <>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bgClass}`}>
                       <Icon className="w-5 h-5" />
                     </div>
@@ -220,7 +220,17 @@ export function DashboardCharts({ chartData, barData, activities }: DashboardCha
                         </span>
                       )}
                     </div>
+                  </>
+                )
+
+                return href ? (
+                  <Link key={activity.id} href={href} className={rowClass}>
+                    {rowContent}
                   </Link>
+                ) : (
+                  <div key={activity.id} className={rowClass}>
+                    {rowContent}
+                  </div>
                 )
               })
             )}
