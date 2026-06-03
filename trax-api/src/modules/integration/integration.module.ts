@@ -16,6 +16,8 @@ import { NectarCrmService } from './application/services/nectar-crm.service';
 import { RdStationService } from './application/services/rd-station.service';
 import { RdStationOAuthService } from './application/services/rd-station-oauth.service';
 import { SyncScheduler } from './application/services/sync.scheduler';
+import { RdTokenRefreshService } from './application/services/rd-token-refresh.service';
+import { MetaTokenRefreshService } from './application/services/meta-token-refresh.service';
 import {
   ConnectGoogleAdsUseCase,
   ListGoogleAdsCustomersUseCase,
@@ -56,6 +58,8 @@ import {
     RdStationService,
     RdStationOAuthService,
     SyncScheduler,
+    RdTokenRefreshService,
+    MetaTokenRefreshService,
     // Google Ads OAuth use-cases
     ConnectGoogleAdsUseCase,
     ListGoogleAdsCustomersUseCase,
@@ -72,6 +76,6 @@ import {
     RdStationCallbackUseCase,
     FinalizeRdStationUseCase,
   ],
-  exports: [MetaAdsService, GoogleAdsService, InstagramService, FacebookPageService, NectarCrmService, RdStationService],
+  exports: [MetaAdsService, GoogleAdsService, InstagramService, FacebookPageService, NectarCrmService, RdStationService, RdStationOAuthService],
 })
 export class IntegrationModule {}

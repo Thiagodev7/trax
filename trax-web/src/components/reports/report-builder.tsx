@@ -12,7 +12,16 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-export type TabKey = 'META_ADS' | 'ORGANIC' | 'CALENDAR' | 'KPI' | 'GOOGLE_ADS' | 'LINKEDIN_ADS'
+export type TabKey =
+  | 'META_ADS'
+  | 'ORGANIC'
+  | 'CALENDAR'
+  | 'KPI'
+  | 'GOOGLE_ADS'
+  | 'LINKEDIN_ADS'
+  | 'RD_STATION'
+  | 'NECTAR_CRM'
+  | 'MARKETING_FUNNEL'
 
 interface TabConfig {
   key: TabKey
@@ -49,7 +58,28 @@ const TAB_CONFIGS: TabConfig[] = [
     label: 'KPIs / CRM',
     icon: TrendingUp,
     description: 'Pipeline de vendas, receita, CAC, ROAS e LTV',
+    requiresProvider: ['NECTAR_CRM', 'RD_STATION'],
+  },
+  {
+    key: 'RD_STATION',
+    label: 'RD Station',
+    icon: TrendingUp,
+    description: 'Leads, funil de qualificação, top formulários e CPL cruzado',
+    requiresProvider: ['RD_STATION'],
+  },
+  {
+    key: 'NECTAR_CRM',
+    label: 'Nectar CRM',
+    icon: TrendingUp,
+    description: 'Pipeline, receita, histórico mensal e CPL cruzado',
     requiresProvider: ['NECTAR_CRM'],
+  },
+  {
+    key: 'MARKETING_FUNNEL',
+    label: 'Funil Marketing',
+    icon: BarChart3,
+    description: 'Funil unificado Meta + Google + RD + Nectar com CPL e ROAS',
+    requiresProvider: ['META_ADS', 'GOOGLE_ADS', 'RD_STATION', 'NECTAR_CRM'],
   },
   {
     key: 'GOOGLE_ADS',
@@ -170,6 +200,7 @@ export function ReportBuilder({ report, companyIntegrations }: Props) {
     GOOGLE_ANALYTICS: '📈',
     TIKTOK_ADS: '🎵',
     LINKEDIN_ADS: '💼',
+    RD_STATION: '🚀',
     CUSTOM: '⚡',
   }
 
@@ -182,6 +213,7 @@ export function ReportBuilder({ report, companyIntegrations }: Props) {
     GOOGLE_ANALYTICS: 'Google Analytics',
     TIKTOK_ADS: 'TikTok Ads',
     LINKEDIN_ADS: 'LinkedIn Ads',
+    RD_STATION: 'RD Station',
     CUSTOM: 'Personalizado',
   }
 

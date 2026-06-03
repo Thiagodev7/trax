@@ -1,5 +1,6 @@
 /**
- * Template default da Meta Ads config — espelha o tron-dashboard.
+ * Templates da Meta Ads config — genéricos e reutilizáveis.
+ * Sem referências a empresas específicas.
  * Aplicado em clientes novos e via endpoint POST /reset.
  */
 
@@ -31,45 +32,191 @@ export interface MetaConfigShape {
   thresholds: MetaConfigThresholds;
   reachFactor: number;
   secondaryAccountColor: string;
+  /** Label da seção de conta secundária — configurável por empresa */
+  secondaryAccountLabel: string;
   sparklineDays: number;
 }
 
-export const TRON_TEMPLATE: MetaConfigShape = {
-  products: [
-    { key: 'inst', label: 'Institucional', color: '#64748B', monthlyBudgetTarget: 2540, namePatterns: ['INSTITUCIONAL', '[INST]'] },
-    { key: 'ebook', label: 'E-books e Materiais Ricos', color: '#EC4899', monthlyBudgetTarget: 4060, namePatterns: ['EBOOK', 'MATERIAL', 'RICO', '[MR]'] },
-    { key: 'ordix', label: 'Ordix', color: '#F59E0B', monthlyBudgetTarget: 9215, namePatterns: ['ORDIX'] },
-    { key: 'box', label: 'Box', color: '#10B981', monthlyBudgetTarget: 9215, namePatterns: ['BOX'] },
-    { key: 'tgc', label: 'TGC', color: '#6366F1', monthlyBudgetTarget: 4610, namePatterns: ['TGC'] },
-    { key: 'dp', label: 'Tron DP', color: '#8B5CF6', monthlyBudgetTarget: 14395, namePatterns: ['TRON DP', '\\bDP\\b'] },
-  ],
-  states: [
-    { code: 'GO', label: 'Goiás', aliases: ['GO'] },
-    { code: 'MT', label: 'Mato Grosso', aliases: ['MT'] },
-    { code: 'PA', label: 'Pará', aliases: ['PA'] },
-    { code: 'BSB', label: 'Brasília/DF', aliases: ['BSB', 'DF'] },
-    { code: 'TO', label: 'Tocantins', aliases: ['TO'] },
-    { code: 'MA', label: 'Maranhão', aliases: ['MA'] },
-  ],
-  stateBudgetByProduct: {
-    inst: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    ebook: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    ordix: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    box: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    tgc: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    dp: { GO: 17.05, MT: 8.53, PA: 23.74, BSB: 15.21, TO: 13.57, MA: 21.90 },
-  },
-  thresholds: {
-    ctr: { good: 1.0, warn: 0.7 },
-    cpc: { warn: 6.0, bad: 8.0 },
-    cpm: { warn: 45, bad: 60 },
-    cpl: { warn: 80, bad: 150 },
-  },
+export type MetaConfigSegment = 'general' | 'ecommerce' | 'education' | 'real-estate';
+
+// ---------------------------------------------------------------------------
+// Thresholds neutros — pontos de partida sensatos para qualquer segmento
+// ---------------------------------------------------------------------------
+const NEUTRAL_THRESHOLDS: MetaConfigThresholds = {
+  ctr: { good: 1.0, warn: 0.7 },
+  cpc: { warn: 6.0, bad: 10.0 },
+  cpm: { warn: 45, bad: 70 },
+  cpl: { warn: 80, bad: 150 },
+};
+
+// ---------------------------------------------------------------------------
+// Template padrão genérico — sem produtos pré-configurados.
+// Base limpa para qualquer agência nova sem viés de segmento.
+// ---------------------------------------------------------------------------
+export const DEFAULT_META_CONFIG: MetaConfigShape = {
+  products: [],
+  states: [],
+  stateBudgetByProduct: {},
+  thresholds: NEUTRAL_THRESHOLDS,
   reachFactor: 0.72,
   secondaryAccountColor: '#06B6D4',
+  secondaryAccountLabel: 'Conta Secundária',
   sparklineDays: 14,
 };
 
+// ---------------------------------------------------------------------------
+// Templates por segmento — usados no onboarding e via botão "Aplicar template"
+// ---------------------------------------------------------------------------
+export const SEGMENT_TEMPLATES: Record<MetaConfigSegment, MetaConfigShape> = {
+  general: {
+    ...DEFAULT_META_CONFIG,
+    products: [
+      {
+        key: 'produto_1',
+        label: 'Produto Principal',
+        color: '#6366F1',
+        monthlyBudgetTarget: 5000,
+        namePatterns: ['PRINCIPAL', '[P1]'],
+      },
+      {
+        key: 'produto_2',
+        label: 'Produto Secundário',
+        color: '#10B981',
+        monthlyBudgetTarget: 2000,
+        namePatterns: ['SECUNDARIO', '[P2]'],
+      },
+    ],
+    thresholds: NEUTRAL_THRESHOLDS,
+  },
+
+  ecommerce: {
+    ...DEFAULT_META_CONFIG,
+    products: [
+      {
+        key: 'awareness',
+        label: 'Awareness',
+        color: '#6366F1',
+        monthlyBudgetTarget: 3000,
+        namePatterns: ['AWARENESS', '[AWR]'],
+      },
+      {
+        key: 'conversao',
+        label: 'Conversão',
+        color: '#10B981',
+        monthlyBudgetTarget: 8000,
+        namePatterns: ['CONVERSAO', 'CONV', '[CVR]'],
+      },
+      {
+        key: 'remarketing',
+        label: 'Remarketing',
+        color: '#F59E0B',
+        monthlyBudgetTarget: 2000,
+        namePatterns: ['REMARKETING', 'RTG', '[RTG]'],
+      },
+      {
+        key: 'retencao',
+        label: 'Retenção',
+        color: '#EC4899',
+        monthlyBudgetTarget: 1500,
+        namePatterns: ['RETENCAO', '[RET]'],
+      },
+    ],
+    thresholds: {
+      ctr: { good: 1.2, warn: 0.8 },
+      cpc: { warn: 4.0, bad: 7.0 },
+      cpm: { warn: 40, bad: 60 },
+      cpl: { warn: 50, bad: 100 },
+    },
+  },
+
+  education: {
+    ...DEFAULT_META_CONFIG,
+    products: [
+      {
+        key: 'graduacao',
+        label: 'Graduação',
+        color: '#6366F1',
+        monthlyBudgetTarget: 6000,
+        namePatterns: ['GRAD', 'GRADUACAO'],
+      },
+      {
+        key: 'pos',
+        label: 'Pós-Graduação',
+        color: '#8B5CF6',
+        monthlyBudgetTarget: 4000,
+        namePatterns: ['POS', 'MBA', 'ESPECIALIZACAO'],
+      },
+      {
+        key: 'cursos_livres',
+        label: 'Cursos Livres',
+        color: '#10B981',
+        monthlyBudgetTarget: 2500,
+        namePatterns: ['CURSO', 'LIVRE', '[CL]'],
+      },
+      {
+        key: 'ead',
+        label: 'EAD',
+        color: '#F59E0B',
+        monthlyBudgetTarget: 3000,
+        namePatterns: ['EAD', 'ONLINE', 'DISTANCIA'],
+      },
+    ],
+    thresholds: {
+      ctr: { good: 0.9, warn: 0.6 },
+      cpc: { warn: 8.0, bad: 14.0 },
+      cpm: { warn: 50, bad: 80 },
+      cpl: { warn: 120, bad: 250 },
+    },
+  },
+
+  'real-estate': {
+    ...DEFAULT_META_CONFIG,
+    products: [
+      {
+        key: 'lancamento',
+        label: 'Lançamento',
+        color: '#6366F1',
+        monthlyBudgetTarget: 15000,
+        namePatterns: ['LANCAMENTO', '[LCT]'],
+      },
+      {
+        key: 'pronto',
+        label: 'Pronto para Morar',
+        color: '#10B981',
+        monthlyBudgetTarget: 8000,
+        namePatterns: ['PRONTO', '[PTM]'],
+      },
+      {
+        key: 'mcmv',
+        label: 'Minha Casa Minha Vida',
+        color: '#F59E0B',
+        monthlyBudgetTarget: 5000,
+        namePatterns: ['MCMV', 'MINHA CASA'],
+      },
+      {
+        key: 'comercial',
+        label: 'Comercial',
+        color: '#EC4899',
+        monthlyBudgetTarget: 4000,
+        namePatterns: ['COMERCIAL', '[COM]'],
+      },
+    ],
+    thresholds: {
+      ctr: { good: 0.8, warn: 0.5 },
+      cpc: { warn: 10.0, bad: 18.0 },
+      cpm: { warn: 60, bad: 90 },
+      cpl: { warn: 200, bad: 450 },
+    },
+  },
+};
+
+/** @deprecated Use DEFAULT_META_CONFIG ou SEGMENT_TEMPLATES */
+export const TRON_TEMPLATE: MetaConfigShape = DEFAULT_META_CONFIG;
+
 export function defaultMetaConfig(): MetaConfigShape {
-  return JSON.parse(JSON.stringify(TRON_TEMPLATE));
+  return JSON.parse(JSON.stringify(DEFAULT_META_CONFIG));
+}
+
+export function segmentTemplate(segment: MetaConfigSegment): MetaConfigShape {
+  return JSON.parse(JSON.stringify(SEGMENT_TEMPLATES[segment] ?? DEFAULT_META_CONFIG));
 }

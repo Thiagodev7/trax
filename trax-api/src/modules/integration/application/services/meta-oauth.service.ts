@@ -7,10 +7,10 @@
  *  3. listAdAccounts   → GET /me/adaccounts
  *  4. Persiste sessão pendente no Redis (TTL 15 min) — consumida ao finalizar
  *
- * Scopes necessários no Meta App:
- *  - ads_read, ads_management, business_management (Meta Ads)
- *  - instagram_basic, instagram_manage_insights, pages_show_list (Instagram)
- *  - pages_read_engagement, read_insights (Facebook Page)
+ * Escopos por canal (evitar `scopeGroup=all` com permissões Instagram não habilitadas no app):
+ *  - ads: ads_read, ads_management, business_management
+ *  - pages / instagram: pages_show_list, pages_read_engagement (Page + IG Business via Page)
+ *  No painel Meta, adicione os casos de uso "Marketing API" e "Facebook Login" antes do OAuth.
  */
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
@@ -19,12 +19,15 @@ import { RedisService } from '@/redis/redis.service';
 const GRAPH_URL = 'https://graph.facebook.com/v21.0';
 const OAUTH_URL = 'https://www.facebook.com/v21.0/dialog/oauth';
 
+export type MetaOAuthTargetProvider = 'META_ADS' | 'INSTAGRAM' | 'FACEBOOK_PAGE';
+
 export interface MetaOAuthState {
   agencyId: string;
   companyId: string;
   scopes: string[];
   returnUrl?: string;
   nonce: string;
+  targetProvider?: MetaOAuthTargetProvider;
 }
 
 export interface MetaPendingOAuth {
@@ -52,7 +55,25 @@ const PENDING_TTL_SECONDS = 15 * 60;
 const REDIS_PREFIX = 'oauth:meta:pending:';
 
 const META_ADS_SCOPES = ['ads_read', 'ads_management', 'business_management'];
-const INSTAGRAM_SCOPES = ['instagram_basic', 'instagram_manage_insights', 'pages_show_list', 'pages_read_engagement', 'read_insights'];
+
+/** Page + Instagram Business (token da Page; IG vinculado à Page) — sem escopos instagram_* deprecados */
+const META_PAGES_SCOPES = ['pages_show_list', 'pages_read_engagement'];
+
+export type MetaScopeGroup = 'ads' | 'pages' | 'instagram' | 'all';
+
+function scopesForGroup(scopeGroup: MetaScopeGroup): string[] {
+  switch (scopeGroup) {
+    case 'ads':
+      return [...META_ADS_SCOPES];
+    case 'pages':
+    case 'instagram':
+      return [...META_PAGES_SCOPES];
+    case 'all':
+      return [...new Set([...META_ADS_SCOPES, ...META_PAGES_SCOPES])];
+    default:
+      return [...META_ADS_SCOPES];
+  }
+}
 
 @Injectable()
 export class MetaOAuthService {
@@ -120,19 +141,26 @@ export class MetaOAuthService {
 
   /**
    * Gera a URL de autorização para o escopo solicitado.
-   * @param scopes 'ads' (Meta Ads) | 'instagram' | 'all' (todos os canais Meta)
+   * @param scopeGroup ads | pages | instagram | all (all = ads + pages, sem escopos Instagram deprecados)
    */
-  buildConnectUrl(agencyId: string, companyId: string, scopeGroup: 'ads' | 'instagram' | 'all', returnUrl?: string): string {
-    const scopes = scopeGroup === 'ads'
-      ? META_ADS_SCOPES
-      : scopeGroup === 'instagram'
-        ? INSTAGRAM_SCOPES
-        : [...new Set([...META_ADS_SCOPES, ...INSTAGRAM_SCOPES])];
+  buildConnectUrl(agencyId: string, companyId: string, scopeGroup: MetaScopeGroup = 'ads', returnUrl?: string): string {
+    const scopes = scopesForGroup(scopeGroup);
+    const targetProvider: MetaOAuthTargetProvider | undefined =
+      scopeGroup === 'ads'
+        ? 'META_ADS'
+        : scopeGroup === 'instagram'
+          ? 'INSTAGRAM'
+          : scopeGroup === 'pages'
+            ? 'FACEBOOK_PAGE'
+            : undefined;
 
     const state = this.signState({
-      agencyId, companyId, scopes,
+      agencyId,
+      companyId,
+      scopes,
       returnUrl: this.validateReturnUrl(returnUrl),
       nonce: randomBytes(16).toString('hex'),
+      targetProvider,
     });
 
     const params = new URLSearchParams({
@@ -169,6 +197,23 @@ export class MetaOAuthService {
     })}`);
     if (!longRes.ok) {
       throw new BadRequestException('Falha ao obter token de longa duração do Meta.');
+    }
+    const { access_token: longToken } = (await longRes.json()) as { access_token: string };
+    return longToken;
+  }
+
+  /** Renova token long-lived (~60 dias) a partir de um token ainda válido ou próximo de expirar */
+  async exchangeLongLivedToken(currentToken: string): Promise<string> {
+    const longRes = await fetch(`${GRAPH_URL}/oauth/access_token?${new URLSearchParams({
+      grant_type: 'fb_exchange_token',
+      client_id: this.appId,
+      client_secret: this.appSecret,
+      fb_exchange_token: currentToken,
+    })}`);
+    if (!longRes.ok) {
+      const err = await longRes.json().catch(() => ({}));
+      const msg = (err as { error?: { message?: string } })?.error?.message ?? longRes.statusText;
+      throw new BadRequestException(`Meta token refresh falhou: ${msg}`);
     }
     const { access_token: longToken } = (await longRes.json()) as { access_token: string };
     return longToken;
@@ -250,9 +295,10 @@ export class MetaOAuthService {
     });
     const base = payload.returnUrl ?? `${this.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
     const sep = base.includes('?') ? '&' : '?';
+    const providerParam = payload.targetProvider ? `&provider=${payload.targetProvider}` : '';
     return {
       pendingId,
-      redirectUrl: `${base}${sep}meta_oauth=pending&pendingId=${pendingId}`,
+      redirectUrl: `${base}${sep}meta_oauth=pending&pendingId=${pendingId}${providerParam}`,
     };
   }
 }

@@ -140,12 +140,12 @@ export class IntegrationController {
   @Version('1')
   @Roles(UserRole.AGENCY_ADMIN, UserRole.AGENCY_VIEWER)
   @ApiOperation({ summary: 'Inicia OAuth do Meta (Ads + Instagram + Facebook Page)' })
-  @ApiQuery({ name: 'scopeGroup', required: false, enum: ['ads', 'instagram', 'all'] })
+  @ApiQuery({ name: 'scopeGroup', required: false, enum: ['ads', 'pages', 'instagram', 'all'] })
   @ApiQuery({ name: 'returnUrl', required: false, type: String })
   connectMetaOAuth(
     @CurrentTenant('agencyId') agencyId: string,
     @Param('companyId', ParseUUIDPipe) companyId: string,
-    @Query('scopeGroup') scopeGroup: 'ads' | 'instagram' | 'all' = 'all',
+    @Query('scopeGroup') scopeGroup: 'ads' | 'pages' | 'instagram' | 'all' = 'ads',
     @Query('returnUrl') returnUrl?: string,
   ) {
     return this.connectMeta.execute(agencyId, companyId, scopeGroup, returnUrl);

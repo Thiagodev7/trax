@@ -17,7 +17,7 @@ interface LoginFormProps {
 export function LoginForm({ domain }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/'
+  const callbackUrl = searchParams.get('callbackUrl')?.trim() || '/'
   const sessionExpired = searchParams.get('expired') === '1'
   const isWelcome = searchParams.get('welcome') === '1'
 

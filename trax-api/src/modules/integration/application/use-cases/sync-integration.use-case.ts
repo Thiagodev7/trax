@@ -2,13 +2,14 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { AuditAction, AuditActorType, AuditEntityType } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
-import { decryptCredentials } from '../crypto.helper';
-import { MetaAdsService } from '../services/meta-ads.service';
+import { decryptCredentials, encryptCredentials } from '../crypto.helper';
+import { MetaAdsService, type MetaAdsCredentials } from '../services/meta-ads.service';
 import { GoogleAdsService } from '../services/google-ads.service';
 import { InstagramService } from '../services/instagram.service';
 import { FacebookPageService } from '../services/facebook-page.service';
 import { NectarCrmService } from '../services/nectar-crm.service';
 import { RdStationService } from '../services/rd-station.service';
+import { RdStationOAuthService } from '../services/rd-station-oauth.service';
 
 function toDateStr(d: Date): string {
   return d.toISOString().split('T')[0];
@@ -40,6 +41,7 @@ export class SyncIntegrationUseCase {
     private readonly fbPage: FacebookPageService,
     private readonly nectar: NectarCrmService,
     private readonly rdStation: RdStationService,
+    private readonly rdOAuth: RdStationOAuthService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -59,7 +61,12 @@ export class SyncIntegrationUseCase {
 
       switch (integration.provider) {
         case 'META_ADS':
-          synced = await this.syncMetaAds(integration.id, creds as any, startDate, endDate);
+          synced = await this.syncMetaAds(
+            integration.id,
+            creds as unknown as MetaAdsCredentials,
+            startDate,
+            endDate,
+          );
           break;
         case 'GOOGLE_ADS':
           synced = await this.syncGoogleAds(integration.id, creds as any, startDate, endDate);
@@ -74,7 +81,13 @@ export class SyncIntegrationUseCase {
           synced = await this.syncNectar(integration.id, creds as any, startDate, endDate);
           break;
         case 'RD_STATION':
-          synced = await this.syncRdStation(integration.id, creds as any, startDate, endDate);
+          synced = await this.syncRdStation(
+            integration.id,
+            creds as { accessToken: string; refreshToken: string },
+            startDate,
+            endDate,
+            (integration.metadata as Record<string, unknown> | null) ?? null,
+          );
           break;
         default:
           this.logger.warn(`Sync not implemented for provider: ${integration.provider}`);
@@ -149,7 +162,7 @@ export class SyncIntegrationUseCase {
 
   private async syncMetaAds(
     integrationId: string,
-    creds: { accessToken: string; adAccountId: string },
+    creds: MetaAdsCredentials,
     startDate: string,
     endDate: string,
   ): Promise<number> {
@@ -288,27 +301,137 @@ export class SyncIntegrationUseCase {
     startDate: string,
     endDate: string,
   ): Promise<number> {
-    const summary = await this.nectar.fetchLeadboard(creds);
-    await this.upsertMetric(integrationId, toDateStr(new Date()), 'crm', 'summary', 'CRM Summary', summary);
-    return 1;
+    const { dailyBreakdown, summary } = await this.nectar.syncData(creds, startDate, endDate);
+    let count = 0;
+
+    for (const [day, data] of Object.entries(dailyBreakdown)) {
+      await this.upsertMetric(
+        integrationId,
+        day,
+        'nectar_daily',
+        'daily',
+        'Nectar Daily',
+        data as unknown as Record<string, unknown>,
+      );
+      count++;
+    }
+
+    await this.upsertMetric(integrationId, endDate, 'crm', 'summary', 'CRM Summary', summary);
+    count++;
+
+    return count;
   }
 
   private async syncRdStation(
     integrationId: string,
-    creds: { accessToken: string; refreshToken: string },
+    rawCreds: { accessToken: string; refreshToken: string },
     startDate: string,
     endDate: string,
+    integrationMetadata: Record<string, unknown> | null,
   ): Promise<number> {
-    const { metrics } = await this.rdStation.syncLeads(creds, startDate, endDate);
+    let creds = rawCreds;
+    const cachedSegId =
+      typeof integrationMetadata?.rdSegmentationId === 'number'
+        ? integrationMetadata.rdSegmentationId
+        : null;
+
+    const runSync = () =>
+      this.rdStation.syncData(creds, startDate, endDate, cachedSegId);
+
+    let result;
+    try {
+      result = await runSync();
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401 && creds.refreshToken) {
+        this.logger.log(`RD Station token expirado para ${integrationId}, renovando...`);
+        const refreshed = await this.rdOAuth.refreshAccessToken(creds.refreshToken);
+        creds = {
+          accessToken: refreshed.access_token,
+          refreshToken: refreshed.refresh_token ?? creds.refreshToken,
+        };
+        await this.prisma.integration.update({
+          where: { id: integrationId },
+          data: { credentialsEnc: encryptCredentials(creds) },
+        });
+        result = await runSync();
+      } else {
+        throw err;
+      }
+    }
+
+    if (result.summary.segmentationId) {
+      await this.prisma.integration.update({
+        where: { id: integrationId },
+        data: {
+          metadata: {
+            ...(integrationMetadata ?? {}),
+            rdSegmentationId: result.summary.segmentationId,
+          },
+        },
+      });
+    }
+
+    const { dailyBreakdown, conversionsByDay, topForms, summary } = result;
     let count = 0;
-    for (const [day, data] of Object.entries(metrics)) {
-      await this.upsertMetric(integrationId, day, 'rd_leads', 'summary', 'RD Station Leads', data as Record<string, unknown>);
+
+    for (const [day, data] of Object.entries(dailyBreakdown)) {
+      await this.upsertMetric(
+        integrationId,
+        day,
+        'rd_leads',
+        'daily',
+        'RD Station Leads',
+        data as unknown as Record<string, unknown>,
+      );
       count++;
     }
-    if (count === 0) {
-      await this.upsertMetric(integrationId, toDateStr(new Date()), 'rd_leads', 'summary', 'RD Station Leads', { leads: 0 });
-      count = 1;
+
+    for (const [day, conversions] of Object.entries(conversionsByDay)) {
+      await this.upsertMetric(
+        integrationId,
+        day,
+        'rd_conversions',
+        'daily',
+        'RD Conversions',
+        { conversions } as Record<string, unknown>,
+      );
+      count++;
     }
+
+    const periodKey = `${startDate}_${endDate}`;
+
+    if (topForms.length > 0) {
+      await this.upsertMetric(
+        integrationId,
+        endDate,
+        'rd_forms',
+        periodKey,
+        'RD Station Forms',
+        { forms: topForms } as unknown as Record<string, unknown>,
+      );
+      count++;
+    }
+    await this.upsertMetric(
+      integrationId,
+      endDate,
+      'rd_summary',
+      periodKey,
+      'RD Station Summary',
+      summary as unknown as Record<string, unknown>,
+    );
+    count++;
+
+    if (count <= 1) {
+      await this.upsertMetric(integrationId, toDateStr(new Date()), 'rd_leads', 'daily', 'RD Station Leads', {
+        leads: 0,
+        qualifiedLeads: 0,
+        customers: 0,
+        total: 0,
+      });
+      count++;
+    }
+
     return count;
   }
 }

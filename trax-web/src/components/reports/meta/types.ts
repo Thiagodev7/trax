@@ -211,6 +211,8 @@ export interface CrmEmbed {
   ticketMedio?: number
   mrr?: number
   previousPeriod?: { vendas: number; receita: number } | null
+  source?: string
+  primarySource?: 'NECTAR_CRM' | 'RD_STATION' | 'MERGED'
 }
 
 export interface AdsetDetail {

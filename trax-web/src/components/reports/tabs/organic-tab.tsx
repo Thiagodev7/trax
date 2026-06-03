@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Users, Eye, Heart, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { useSharedApiClient } from '@/lib/shared-api-client'
 import { reportMetricsPath } from '@/lib/report-metrics-path'
@@ -112,6 +113,7 @@ function PostCard({ post }: { post: Post }) {
 }
 
 export function OrganicTab({ reportId, periodStart, periodEnd, selectedDate, shareToken }: Props) {
+  const { status: sessionStatus } = useSession()
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -146,7 +148,19 @@ export function OrganicTab({ reportId, periodStart, periodEnd, selectedDate, sha
     }
   }, [api, reportId, shareToken, periodStart, periodEnd, selectedDate])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (shareToken) {
+      fetchData()
+      return
+    }
+    if (sessionStatus === 'loading') return
+    if (sessionStatus === 'unauthenticated') {
+      setLoading(false)
+      setError('Sessão expirada. Faça login novamente.')
+      return
+    }
+    fetchData()
+  }, [fetchData, shareToken, sessionStatus])
 
   if (loading) {
     return (
@@ -179,10 +193,17 @@ export function OrganicTab({ reportId, periodStart, periodEnd, selectedDate, sha
   const hasFB = !!metrics?.facebook.profile
 
   if (!hasIG && !hasFB) {
+    const periodHint =
+      periodStart && periodEnd ? ` Período do relatório: ${periodStart} → ${periodEnd}.` : ''
     return (
       <div className="card p-10 border-[var(--color-border)] border-dashed text-center">
-        <p className="font-medium text-[var(--color-foreground)]">Nenhum dado orgânico</p>
-        <p className="text-sm text-[var(--color-muted-foreground)] mt-1">Sincronize as integrações de Instagram ou Facebook Page.</p>
+        <p className="font-medium text-[var(--color-foreground)]">Nenhum dado orgânico no período</p>
+        <p className="text-sm text-[var(--color-muted-foreground)] mt-1 max-w-md mx-auto">
+          Conecte e sincronize <strong>Instagram</strong> ou <strong>Facebook Page</strong> nas integrações do cliente.{periodHint}
+        </p>
+        <button onClick={fetchData} className="mt-4 text-sm text-[var(--color-primary)] hover:underline inline-flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" /> Tentar novamente
+        </button>
       </div>
     )
   }

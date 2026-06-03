@@ -10,7 +10,7 @@ import { MetaOAuthService } from '../services/meta-oauth.service';
 import { encryptCredentials } from '../crypto.helper';
 import { AuditLogService } from '@modules/audit-log/application/services/audit-log.service';
 
-type ScopeGroup = 'ads' | 'instagram' | 'all';
+type ScopeGroup = 'ads' | 'pages' | 'instagram' | 'all';
 
 // ── Connect ───────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ export class ConnectMetaUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  execute(agencyId: string, companyId: string, scopeGroup: ScopeGroup = 'all', returnUrl?: string): { url: string } {
+  execute(agencyId: string, companyId: string, scopeGroup: ScopeGroup = 'ads', returnUrl?: string): { url: string } {
     const url = this.oauth.buildConnectUrl(agencyId, companyId, scopeGroup, returnUrl);
     this.auditLog.record({
       agencyId,
@@ -50,9 +50,13 @@ export class MetaOAuthCallbackUseCase {
   async execute(code: string, state: string, error?: string): Promise<string> {
     if (error) {
       let agencyId: string | undefined;
+      let redirectBase = this.oauth.getWebAppUrl();
       try {
         const payload = this.oauth.verifyState(state);
         agencyId = payload.agencyId;
+        redirectBase =
+          payload.returnUrl ??
+          `${this.oauth.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
       } catch { /* silencioso */ }
       if (agencyId) {
         this.auditLog.record({
@@ -65,8 +69,8 @@ export class MetaOAuthCallbackUseCase {
           metadata: { provider: 'META', step: 'error', error },
         });
       }
-      const base = this.oauth.getWebAppUrl();
-      return `${base}/?meta_oauth=error&message=${encodeURIComponent(error)}`;
+      const sep = redirectBase.includes('?') ? '&' : '?';
+      return `${redirectBase}${sep}meta_oauth=error&message=${encodeURIComponent(error)}`;
     }
 
     try {
@@ -84,8 +88,15 @@ export class MetaOAuthCallbackUseCase {
       return redirectUrl;
     } catch (err: unknown) {
       this.logger.error('Meta OAuth callback falhou', err);
-      const base = this.oauth.getWebAppUrl();
-      return `${base}/?meta_oauth=error&message=${encodeURIComponent('Falha na conexão Meta')}`;
+      let redirectBase = this.oauth.getWebAppUrl();
+      try {
+        const payload = this.oauth.verifyState(state);
+        redirectBase =
+          payload.returnUrl ??
+          `${this.oauth.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
+      } catch { /* silencioso */ }
+      const sep = redirectBase.includes('?') ? '&' : '?';
+      return `${redirectBase}${sep}meta_oauth=error&message=${encodeURIComponent('Falha na conexão Meta')}`;
     }
   }
 }

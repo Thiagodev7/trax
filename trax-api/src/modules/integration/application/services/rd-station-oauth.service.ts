@@ -15,7 +15,9 @@ import { RedisService } from '@/redis/redis.service';
 
 const RD_AUTH_URL = 'https://api.rd.services/auth/dialog';
 const RD_TOKEN_URL = 'https://api.rd.services/auth/token';
-const RD_API_URL = 'https://api.rd.services';
+/** Troca do authorization code — exige query token_by=code (docs RD) */
+const RD_TOKEN_URL_BY_CODE = `${RD_TOKEN_URL}?token_by=code`;
+const RD_ACCOUNT_INFO_PATH = '/marketing/account_info';
 
 const PENDING_TTL = 15 * 60;
 const REDIS_PREFIX = 'oauth:rds:pending:';
@@ -120,13 +122,12 @@ export class RdStationOAuthService {
   }
 
   async exchangeCodeForTokens(code: string): Promise<RdsTokenResponse> {
-    const res = await fetch(RD_TOKEN_URL, {
+    const res = await fetch(RD_TOKEN_URL_BY_CODE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         client_id: this.clientId,
         client_secret: this.clientSecret,
-        redirect_uri: this.getRedirectUri(),
         code,
       }),
     });
@@ -140,11 +141,10 @@ export class RdStationOAuthService {
   async refreshAccessToken(refreshToken: string): Promise<RdsTokenResponse> {
     const res = await fetch(RD_TOKEN_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         client_id: this.clientId,
         client_secret: this.clientSecret,
-        grant_type: 'refresh_token',
         refresh_token: refreshToken,
       }),
     });
@@ -153,8 +153,8 @@ export class RdStationOAuthService {
   }
 
   async getAccountInfo(accessToken: string): Promise<RdsAccountInfo> {
-    const res = await fetch(`${RD_API_URL}/platform/account`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    const res = await fetch(`https://api.rd.services${RD_ACCOUNT_INFO_PATH}`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
     });
     if (!res.ok) throw new BadRequestException('Falha ao obter informações da conta RD Station.');
     const data = (await res.json()) as { name?: string; email?: string };

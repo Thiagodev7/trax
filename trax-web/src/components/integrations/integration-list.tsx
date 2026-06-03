@@ -105,14 +105,32 @@ export function IntegrationList({ companyId, initialIntegrations }: Props) {
 
   async function handleSync(id: string) {
     setSyncing(id)
+    const integration = integrations.find((i) => i.id === id)
+    const isRd = integration?.provider === 'RD_STATION'
+    if (isRd) {
+      toast.info('Sincronizando RD Station… pode levar 1–3 minutos. Não feche a página.')
+    }
     try {
-      const result = await api.post<{ synced: number }>(`/integrations/${id}/sync`, {})
+      const result = await api.post<{ synced: number }>(
+        `/integrations/${id}/sync`,
+        {},
+        { timeoutMs: 15 * 60 * 1000 },
+      )
       toast.success(`Sincronização concluída! ${result.synced} registros atualizados.`)
       setIntegrations((prev) =>
         prev.map((i) => i.id === id ? { ...i, status: 'ACTIVE', lastSyncAt: new Date().toISOString() } : i)
       )
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao sincronizar')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao sincronizar'
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        toast.error('Sync demorou demais. Verifique os logs da API — os dados podem ter sido gravados parcialmente.')
+      } else if (message.includes('aborted') || message.includes('hang up')) {
+        toast.error(
+          'Conexão interrompida durante o sync. Aguarde 1 minuto e tente de novo — a API pode ainda estar processando.',
+        )
+      } else {
+        toast.error(message)
+      }
       setIntegrations((prev) =>
         prev.map((i) => i.id === id ? { ...i, status: 'ERROR' } : i)
       )
@@ -155,7 +173,15 @@ export function IntegrationList({ companyId, initialIntegrations }: Props) {
       if (integration.provider === 'GOOGLE_ADS') {
         endpoint = `/companies/${companyId}/integrations/google-ads/connect${params}`
       } else if (['META_ADS', 'INSTAGRAM', 'FACEBOOK_PAGE'].includes(integration.provider)) {
-        const scopeGroup = integration.provider === 'META_ADS' ? 'ads' : 'instagram'
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('meta_oauth_provider', integration.provider)
+        }
+        const scopeGroup =
+          integration.provider === 'META_ADS'
+            ? 'ads'
+            : integration.provider === 'FACEBOOK_PAGE'
+              ? 'pages'
+              : 'instagram'
         endpoint = `/companies/${companyId}/integrations/meta/connect?scopeGroup=${scopeGroup}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
       } else if (integration.provider === 'RD_STATION') {
         endpoint = `/companies/${companyId}/integrations/rd-station/connect${params}`
@@ -276,6 +302,21 @@ export function IntegrationList({ companyId, initialIntegrations }: Props) {
                   {isError && integration.lastErrorMsg && (
                     <p className="text-xs text-red-400 bg-red-500/10 rounded p-1.5 mt-1">
                       {integration.lastErrorMsg.slice(0, 120)}
+                    </p>
+                  )}
+                  {['META_ADS', 'INSTAGRAM', 'FACEBOOK_PAGE'].includes(integration.provider) && (
+                    <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                      Token renovado automaticamente (semanal). Reconecte se aparecer erro de token.
+                    </p>
+                  )}
+                  {integration.provider === 'RD_STATION' && (
+                    <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                      Sync via segmentação · enrich com pausa anti rate limit (429)
+                    </p>
+                  )}
+                  {integration.provider === 'NECTAR_CRM' && (
+                    <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                      API v1 · trend diário + pipeline no relatório
                     </p>
                   )}
                 </div>

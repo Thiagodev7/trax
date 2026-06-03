@@ -7,7 +7,7 @@
 import { PrismaClient, UserRole, ReportStatus, AgencyPlan, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { TRON_TEMPLATE } from '../src/modules/company/meta-config/meta-config.template';
+import { defaultMetaConfig } from '../src/modules/company/meta-config/meta-config.template';
 
 const prisma = new PrismaClient();
 
@@ -144,30 +144,34 @@ async function main() {
     },
   });
 
+  const tpl = defaultMetaConfig();
+
   await (prisma as any).companyMetaConfig.upsert({
     where: { companyId: tronCompany.id },
     update: {
-      products: TRON_TEMPLATE.products as any,
-      states: TRON_TEMPLATE.states as any,
-      stateBudgetByProduct: TRON_TEMPLATE.stateBudgetByProduct as any,
-      thresholds: TRON_TEMPLATE.thresholds as any,
-      reachFactor: TRON_TEMPLATE.reachFactor,
-      secondaryAccountColor: TRON_TEMPLATE.secondaryAccountColor,
-      sparklineDays: TRON_TEMPLATE.sparklineDays,
+      products: tpl.products as any,
+      states: tpl.states as any,
+      stateBudgetByProduct: tpl.stateBudgetByProduct as any,
+      thresholds: tpl.thresholds as any,
+      reachFactor: tpl.reachFactor,
+      secondaryAccountColor: tpl.secondaryAccountColor,
+      secondaryAccountLabel: tpl.secondaryAccountLabel,
+      sparklineDays: tpl.sparklineDays,
     },
     create: {
       companyId: tronCompany.id,
-      products: TRON_TEMPLATE.products as any,
-      states: TRON_TEMPLATE.states as any,
-      stateBudgetByProduct: TRON_TEMPLATE.stateBudgetByProduct as any,
-      thresholds: TRON_TEMPLATE.thresholds as any,
-      reachFactor: TRON_TEMPLATE.reachFactor,
-      secondaryAccountColor: TRON_TEMPLATE.secondaryAccountColor,
-      sparklineDays: TRON_TEMPLATE.sparklineDays,
+      products: tpl.products as any,
+      states: tpl.states as any,
+      stateBudgetByProduct: tpl.stateBudgetByProduct as any,
+      thresholds: tpl.thresholds as any,
+      reachFactor: tpl.reachFactor,
+      secondaryAccountColor: tpl.secondaryAccountColor,
+      secondaryAccountLabel: tpl.secondaryAccountLabel,
+      sparklineDays: tpl.sparklineDays,
     },
   });
 
-  console.log(`✅ Empresa Tron Sistemas + meta-config aplicada (${TRON_TEMPLATE.products.length} produtos, ${TRON_TEMPLATE.states.length} UFs)`);
+  console.log(`✅ Empresa Tron Sistemas + meta-config criada (${tpl.products.length} produtos, ${tpl.states.length} UFs)`);
 
   // ─────────────────────────────────────────────────────
   // 4. Usuário COMPANY_VIEWER vinculado à company1

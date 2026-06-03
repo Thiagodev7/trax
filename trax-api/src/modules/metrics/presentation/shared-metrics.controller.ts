@@ -9,6 +9,9 @@ import { GetGoogleAdsMetricsUseCase } from '../application/use-cases/get-google-
 import { GetOrganicMetricsUseCase } from '../application/use-cases/get-organic-metrics.use-case';
 import { GetCrmMetricsUseCase } from '../application/use-cases/get-crm-metrics.use-case';
 import { GetCalendarMetricsUseCase } from '../application/use-cases/get-calendar-metrics.use-case';
+import { GetRdStationMetricsUseCase } from '../application/use-cases/get-rd-station-metrics.use-case';
+import { GetNectarMetricsUseCase } from '../application/use-cases/get-nectar-metrics.use-case';
+import { GetMarketingFunnelUseCase } from '../application/use-cases/get-marketing-funnel.use-case';
 import { SharedReportAccessService } from '../application/services/shared-report-access.service';
 
 @ApiTags('Shared Metrics')
@@ -23,6 +26,9 @@ export class SharedMetricsController {
     private readonly getOrganic: GetOrganicMetricsUseCase,
     private readonly getCrm: GetCrmMetricsUseCase,
     private readonly getCalendar: GetCalendarMetricsUseCase,
+    private readonly getRdStation: GetRdStationMetricsUseCase,
+    private readonly getNectar: GetNectarMetricsUseCase,
+    private readonly getMarketingFunnel: GetMarketingFunnelUseCase,
   ) {}
 
   @Public()
@@ -132,6 +138,45 @@ export class SharedMetricsController {
   ) {
     return this.sharedAccess.withSharedReport(token, ({ reportId, agencyId }) =>
       this.getCalendar.execute({ agencyId, reportId, startDate, endDate }),
+    );
+  }
+
+  @Public()
+  @Get('rd-station')
+  @Version('1')
+  async rdStation(
+    @Param('token') token: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.sharedAccess.withSharedReport(token, ({ reportId, agencyId }) =>
+      this.getRdStation.execute({ agencyId, reportId, startDate, endDate }),
+    );
+  }
+
+  @Public()
+  @Get('nectar')
+  @Version('1')
+  async nectar(
+    @Param('token') token: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.sharedAccess.withSharedReport(token, ({ reportId, agencyId }) =>
+      this.getNectar.execute({ agencyId, reportId, startDate, endDate }),
+    );
+  }
+
+  @Public()
+  @Get('marketing-funnel')
+  @Version('1')
+  async marketingFunnel(
+    @Param('token') token: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.sharedAccess.withSharedReport(token, ({ reportId, agencyId }) =>
+      this.getMarketingFunnel.execute({ agencyId, reportId, startDate, endDate }),
     );
   }
 }

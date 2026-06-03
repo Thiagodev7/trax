@@ -45,7 +45,7 @@ export function MetaAdsTab({ reportId, periodStart, periodEnd, shareToken }: Pro
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
-  const { data: session } = useSession() as any
+  const { data: session, status: sessionStatus } = useSession()
   const isPublic = !!shareToken
 
   const initialPeriod: PeriodValue = useMemo(() => {
@@ -97,7 +97,19 @@ export function MetaAdsTab({ reportId, periodStart, periodEnd, shareToken }: Pro
     }
   }, [api, reportId, shareToken, period.start, period.end, campaign, status, product, stateFilter, search])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (isPublic) {
+      fetchData()
+      return
+    }
+    if (sessionStatus === 'loading') return
+    if (sessionStatus === 'unauthenticated') {
+      setLoading(false)
+      setError('Sessão expirada. Faça login novamente.')
+      return
+    }
+    fetchData()
+  }, [fetchData, isPublic, sessionStatus])
 
   const handleRefresh = useCallback(async () => {
     if (isPublic) {
@@ -105,15 +117,21 @@ export function MetaAdsTab({ reportId, periodStart, periodEnd, shareToken }: Pro
       toast.success('Dados atualizados')
       return
     }
-    if (!metrics?.accounts?.length) {
-      fetchData()
+    const accounts = metrics?.accounts ?? []
+    if (accounts.length === 0) {
+      await fetchData()
       return
     }
     setSyncing(true)
     try {
-      const primary = metrics.accounts.find((a) => !a.isSecondary) ?? metrics.accounts[0]
-      await api.post(`/integrations/${primary.id}/sync`, {})
-      toast.success('Sincronização disparada — atualizando dados…')
+      for (const account of accounts) {
+        await api.post(`/integrations/${account.id}/sync`, {})
+      }
+      toast.success(
+        accounts.length > 1
+          ? `${accounts.length} contas Meta sincronizadas — atualizando…`
+          : 'Sincronização disparada — atualizando dados…',
+      )
       await fetchData()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Erro ao sincronizar')

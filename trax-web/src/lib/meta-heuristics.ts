@@ -1,6 +1,6 @@
 /**
  * Heurísticas Meta Ads (web) — baseadas em MetaConfig vindo do backend.
- * Funções aceitam config opcional; fallback usa template Tron.
+ * Config sempre vem do tenant; sem fallbacks com dados de empresas específicas.
  */
 
 export interface MetaConfigProduct {
@@ -31,48 +31,55 @@ export interface MetaConfigShape {
   thresholds: MetaConfigThresholds;
   reachFactor: number;
   secondaryAccountColor: string;
+  /** Label da seção de conta secundária — configurável por empresa */
+  secondaryAccountLabel?: string;
   sparklineDays: number;
 }
 
-export const TRON_TEMPLATE: MetaConfigShape = {
-  products: [
-    { key: 'inst', label: 'Institucional', color: '#64748B', monthlyBudgetTarget: 2540, namePatterns: ['INSTITUCIONAL', '[INST]'] },
-    { key: 'ebook', label: 'E-books e Materiais Ricos', color: '#EC4899', monthlyBudgetTarget: 4060, namePatterns: ['EBOOK', 'MATERIAL', 'RICO', '[MR]'] },
-    { key: 'ordix', label: 'Ordix', color: '#F59E0B', monthlyBudgetTarget: 9215, namePatterns: ['ORDIX'] },
-    { key: 'box', label: 'Box', color: '#10B981', monthlyBudgetTarget: 9215, namePatterns: ['BOX'] },
-    { key: 'tgc', label: 'TGC', color: '#6366F1', monthlyBudgetTarget: 4610, namePatterns: ['TGC'] },
-    { key: 'dp', label: 'Tron DP', color: '#8B5CF6', monthlyBudgetTarget: 14395, namePatterns: ['TRON DP', '\\bDP\\b'] },
-  ],
-  states: [
-    { code: 'GO', label: 'Goiás', aliases: ['GO'] },
-    { code: 'MT', label: 'Mato Grosso', aliases: ['MT'] },
-    { code: 'PA', label: 'Pará', aliases: ['PA'] },
-    { code: 'BSB', label: 'Brasília/DF', aliases: ['BSB', 'DF'] },
-    { code: 'TO', label: 'Tocantins', aliases: ['TO'] },
-    { code: 'MA', label: 'Maranhão', aliases: ['MA'] },
-  ],
-  stateBudgetByProduct: {
-    inst: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    ebook: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    ordix: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    box: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    tgc: { GO: 14.91, MT: 5.15, PA: 35.67, BSB: 9.77, TO: 18.42, MA: 16.08 },
-    dp: { GO: 17.05, MT: 8.53, PA: 23.74, BSB: 15.21, TO: 13.57, MA: 21.90 },
-  },
-  thresholds: {
-    ctr: { good: 1.0, warn: 0.7 },
-    cpc: { warn: 6.0, bad: 8.0 },
-    cpm: { warn: 45, bad: 60 },
-    cpl: { warn: 80, bad: 150 },
-  },
+// ---------------------------------------------------------------------------
+// Thresholds neutros — usados apenas quando config do tenant não está disponível
+// ---------------------------------------------------------------------------
+export const NEUTRAL_THRESHOLDS: MetaConfigThresholds = {
+  ctr: { good: 1.0, warn: 0.7 },
+  cpc: { warn: 6.0, bad: 10.0 },
+  cpm: { warn: 45, bad: 70 },
+  cpl: { warn: 80, bad: 150 },
+};
+
+// ---------------------------------------------------------------------------
+// Config padrão genérica — sem produtos de nenhuma empresa específica.
+// Usada apenas como fallback de último recurso (config do tenant deve sempre vir do backend).
+// ---------------------------------------------------------------------------
+export const DEFAULT_META_CONFIG: MetaConfigShape = {
+  products: [],
+  states: [],
+  stateBudgetByProduct: {},
+  thresholds: NEUTRAL_THRESHOLDS,
   reachFactor: 0.72,
   secondaryAccountColor: '#06B6D4',
+  secondaryAccountLabel: 'Conta Secundária',
   sparklineDays: 14,
-}
+};
 
-export function getProduct(key: string | null | undefined, config?: MetaConfigShape | null): MetaConfigProduct | null {
+/** @deprecated Use DEFAULT_META_CONFIG. Mantido para compatibilidade durante migração. */
+export const TRON_TEMPLATE: MetaConfigShape = DEFAULT_META_CONFIG;
+/** @deprecated Use NEUTRAL_THRESHOLDS. */
+export const META_THRESHOLDS = NEUTRAL_THRESHOLDS;
+/** @deprecated Derive cores dos produtos via `config.products`. */
+export const PRODUCT_COLORS: Record<string, string> = {};
+/** @deprecated Derive labels dos produtos via `config.products`. */
+export const PRODUCT_LABELS: Record<string, string> = {};
+
+// ---------------------------------------------------------------------------
+// Funções utilitárias — sempre usam o config do tenant como fonte da verdade
+// ---------------------------------------------------------------------------
+
+export function getProduct(
+  key: string | null | undefined,
+  config?: MetaConfigShape | null,
+): MetaConfigProduct | null {
   if (!key) return null
-  const cfg = config ?? TRON_TEMPLATE
+  const cfg = config ?? DEFAULT_META_CONFIG
   return cfg.products.find((p) => p.key === key) ?? null
 }
 
@@ -84,21 +91,16 @@ export function productLabel(key: string | null | undefined, config?: MetaConfig
   return getProduct(key, config)?.label ?? (key ?? 'Outros')
 }
 
-// Compat alias mantém os componentes que importavam PRODUCT_COLORS / PRODUCT_LABELS
-export const PRODUCT_COLORS: Record<string, string> = Object.fromEntries(
-  TRON_TEMPLATE.products.map((p) => [p.key, p.color]),
-)
-export const PRODUCT_LABELS: Record<string, string> = Object.fromEntries(
-  TRON_TEMPLATE.products.map((p) => [p.key, p.label]),
-)
-export const META_THRESHOLDS = TRON_TEMPLATE.thresholds
-
 export function colorForMetric(
   metric: 'ctr' | 'cpc' | 'cpm' | 'cpl',
   value: number,
   config?: MetaConfigShape | null,
 ): string {
-  const t = (config ?? TRON_TEMPLATE).thresholds[metric] as { good?: number; warn: number; bad?: number }
+  const t = (config ?? DEFAULT_META_CONFIG).thresholds[metric] as {
+    good?: number
+    warn: number
+    bad?: number
+  }
   if (metric === 'ctr') {
     const good = t.good ?? 1.0
     return value >= good ? '#10B981' : value >= t.warn ? '#F59E0B' : '#EF4444'
@@ -111,7 +113,7 @@ export function computePerformanceScore(
   summary: { ctr: number; cpc: number; cpl: number; totalLeads: number },
   config?: MetaConfigShape | null,
 ): number {
-  const t = (config ?? TRON_TEMPLATE).thresholds
+  const t = (config ?? DEFAULT_META_CONFIG).thresholds
   let score = 50
   score += summary.ctr >= t.ctr.good ? 25 : summary.ctr >= t.ctr.warn ? 12 : summary.ctr >= t.ctr.warn * 0.7 ? 6 : 0
   score += summary.cpc <= t.cpc.warn * 0.85 ? 20 : summary.cpc <= t.cpc.warn ? 10 : summary.cpc <= t.cpc.bad * 1.5 ? 5 : 0
@@ -120,8 +122,12 @@ export function computePerformanceScore(
   return Math.round(Math.min(100, Math.max(0, (score - 50) * 2)))
 }
 
-export function detectProduct(name: string, _campaignCode?: string, config?: MetaConfigShape | null): string | null {
-  const cfg = config ?? TRON_TEMPLATE
+export function detectProduct(
+  name: string,
+  _campaignCode?: string,
+  config?: MetaConfigShape | null,
+): string | null {
+  const cfg = config ?? DEFAULT_META_CONFIG
   const u = (name ?? '').toUpperCase()
   for (const p of cfg.products) {
     for (const pat of p.namePatterns ?? []) {
@@ -136,12 +142,15 @@ export function detectProduct(name: string, _campaignCode?: string, config?: Met
   return null
 }
 
-export function detectProductFromCaption(caption: string, config?: MetaConfigShape | null): string | null {
+export function detectProductFromCaption(
+  caption: string,
+  config?: MetaConfigShape | null,
+): string | null {
   return detectProduct(caption, undefined, config)
 }
 
 export function detectStates(name: string, config?: MetaConfigShape | null): string[] {
-  const cfg = config ?? TRON_TEMPLATE
+  const cfg = config ?? DEFAULT_META_CONFIG
   const u = (name ?? '').toUpperCase()
   const found: string[] = []
   for (const st of cfg.states) {

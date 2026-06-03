@@ -87,11 +87,9 @@ export class GetMetaAdsMetricsUseCase {
     const accounts = metaIntegrations.map((i) => {
       const displayName = i.displayName ?? i.externalAccount ?? 'Meta Ads';
       const meta = (i.metadata as Record<string, unknown> | null) ?? {};
-      const isSecondary =
-        meta.isSecondary === true ||
-        displayName.toLowerCase().includes('rio verde') ||
-        displayName.toLowerCase().includes(' rv') ||
-        displayName.toLowerCase().endsWith('rv');
+      // A conta secundária é identificada pela flag `isSecondary` no metadata da integração.
+      // O usuário define isso ao configurar a integração — sem heurísticas por nome.
+      const isSecondary = meta.isSecondary === true;
       return {
         id: i.id,
         name: displayName,
@@ -116,7 +114,7 @@ export class GetMetaAdsMetricsUseCase {
       secondaryAccounts: accounts.filter((a) => a.isSecondary),
       rioVerde: rioVerdeData
         ? {
-            label: accounts.find((a) => a.isSecondary)?.name ?? 'Rio Verde',
+            label: accounts.find((a) => a.isSecondary)?.name ?? config.secondaryAccountLabel,
             color: config.secondaryAccountColor,
             ...rioVerdeData,
           }

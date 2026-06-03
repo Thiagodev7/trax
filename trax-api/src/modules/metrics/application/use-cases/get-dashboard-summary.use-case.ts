@@ -6,6 +6,10 @@ import { ptBR } from 'date-fns/locale';
 interface MetricData {
   spend?: number;
   leads?: number;
+  total?: number;
+  contacts?: number;
+  qualifiedLeads?: number;
+  customers?: number;
   impressions?: number;
   clicks?: number;
   ctr?: number;
@@ -60,7 +64,8 @@ function aggregateMetrics(records: { data: unknown }[]): MonthlyAggregate {
   for (const record of records) {
     const d = record.data as MetricData;
     totals.totalSpend += d.spend ?? 0;
-    totals.totalLeads += d.leads ?? 0;
+    totals.totalLeads +=
+      d.leads ?? d.total ?? d.contacts ?? d.qualifiedLeads ?? d.customers ?? 0;
     totals.totalImpressions += d.impressions ?? 0;
     totals.totalClicks += d.clicks ?? 0;
     if (d.ctr != null) { totals.ctrSum += d.ctr; totals.ctrCount++; }
@@ -122,17 +127,21 @@ export class GetDashboardSummaryUseCase {
         where: {
           integrationId: { in: integrationIds },
           date: { gte: startCurrent, lte: endCurrent },
-          metricType: { in: ['campaign', 'summary', 'crm'] },
+          metricType: {
+            in: ['campaign', 'summary', 'crm', 'rd_leads', 'nectar_daily', 'rd_summary'],
+          },
         },
-        select: { data: true },
+        select: { data: true, metricType: true },
       }),
       this.prisma.dailyMetric.findMany({
         where: {
           integrationId: { in: integrationIds },
           date: { gte: startPrev, lte: endPrev },
-          metricType: { in: ['campaign', 'summary', 'crm'] },
+          metricType: {
+            in: ['campaign', 'summary', 'crm', 'rd_leads', 'nectar_daily', 'rd_summary'],
+          },
         },
-        select: { data: true },
+        select: { data: true, metricType: true },
       }),
     ]);
 
@@ -141,9 +150,11 @@ export class GetDashboardSummaryUseCase {
       where: {
         integrationId: { in: integrationIds },
         date: { gte: startOfMonth(subMonths(now, 5)), lte: endCurrent },
-        metricType: { in: ['campaign', 'summary', 'crm'] },
+        metricType: {
+          in: ['campaign', 'summary', 'crm', 'rd_leads', 'nectar_daily', 'rd_summary'],
+        },
       },
-      select: { date: true, data: true },
+      select: { date: true, data: true, metricType: true },
     });
 
     // Group evolution by month
@@ -162,7 +173,8 @@ export class GetDashboardSummaryUseCase {
       if (entry) {
         const d = rec.data as MetricData;
         entry.spend += d.spend ?? 0;
-        entry.leads += d.leads ?? 0;
+        entry.leads +=
+          d.leads ?? d.total ?? d.contacts ?? d.qualifiedLeads ?? d.customers ?? 0;
       }
     }
 

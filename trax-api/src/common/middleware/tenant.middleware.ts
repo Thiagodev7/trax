@@ -24,12 +24,15 @@ interface CachedTenant {
 const memoryFallback = new Map<string, CachedTenant & { expiresAt: number }>();
 const CACHE_TTL_SECONDS = Number(process.env.TENANT_CACHE_TTL ?? 300);
 
+/** OAuth callbacks hit API host (localhost:3000) without tenant subdomain — agencyId comes from signed state */
 const PUBLIC_PATHS_SKIP_TENANT = [
   '/api/health',
   '/api/docs',
   '/api/v1/onboarding',
   '/api/v1/super-admin',
   '/api/v1/integrations/google-ads/callback',
+  '/api/v1/integrations/meta/callback',
+  '/api/v1/integrations/rd-station/callback',
 ];
 
 const REDIS_PREFIX = 'tenant:';

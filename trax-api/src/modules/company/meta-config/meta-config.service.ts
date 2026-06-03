@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { defaultMetaConfig, MetaConfigShape } from './meta-config.template';
+import {
+  defaultMetaConfig,
+  MetaConfigShape,
+  MetaConfigSegment,
+  segmentTemplate,
+} from './meta-config.template';
 
 @Injectable()
 export class MetaConfigService {
@@ -22,6 +27,7 @@ export class MetaConfigService {
           thresholds: tpl.thresholds as any,
           reachFactor: tpl.reachFactor,
           secondaryAccountColor: tpl.secondaryAccountColor,
+          secondaryAccountLabel: tpl.secondaryAccountLabel,
           sparklineDays: tpl.sparklineDays,
         },
       });
@@ -49,17 +55,20 @@ export class MetaConfigService {
         ...(patch.secondaryAccountColor !== undefined && {
           secondaryAccountColor: patch.secondaryAccountColor,
         }),
+        ...(patch.secondaryAccountLabel !== undefined && {
+          secondaryAccountLabel: patch.secondaryAccountLabel,
+        }),
         ...(patch.sparklineDays !== undefined && { sparklineDays: patch.sparklineDays }),
       },
     });
     return this.serialize(updated);
   }
 
-  async reset(agencyId: string, companyId: string) {
+  async reset(agencyId: string, companyId: string, segment?: MetaConfigSegment) {
     const company = await this.prisma.company.findFirst({ where: { id: companyId, agencyId } });
     if (!company) throw new NotFoundException('Empresa não encontrada.');
 
-    const tpl = defaultMetaConfig();
+    const tpl = segment ? segmentTemplate(segment) : defaultMetaConfig();
     const cfg = await this.prisma.companyMetaConfig.upsert({
       where: { companyId },
       update: {
@@ -69,6 +78,7 @@ export class MetaConfigService {
         thresholds: tpl.thresholds as any,
         reachFactor: tpl.reachFactor,
         secondaryAccountColor: tpl.secondaryAccountColor,
+        secondaryAccountLabel: tpl.secondaryAccountLabel,
         sparklineDays: tpl.sparklineDays,
       },
       create: {
@@ -79,6 +89,7 @@ export class MetaConfigService {
         thresholds: tpl.thresholds as any,
         reachFactor: tpl.reachFactor,
         secondaryAccountColor: tpl.secondaryAccountColor,
+        secondaryAccountLabel: tpl.secondaryAccountLabel,
         sparklineDays: tpl.sparklineDays,
       },
     });
@@ -127,6 +138,7 @@ export class MetaConfigService {
       thresholds: cfg.thresholds as any,
       reachFactor: cfg.reachFactor,
       secondaryAccountColor: cfg.secondaryAccountColor,
+      secondaryAccountLabel: cfg.secondaryAccountLabel ?? 'Conta Secundária',
       sparklineDays: cfg.sparklineDays,
     };
   }

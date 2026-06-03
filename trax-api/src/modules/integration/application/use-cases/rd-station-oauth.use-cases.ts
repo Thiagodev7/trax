@@ -98,6 +98,13 @@ export class FinalizeRdStationUseCase {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
     }
 
+    const test = await this.oauth.testConnection(pending.accessToken);
+    if (!test.valid) {
+      throw new BadRequestException(
+        'Não foi possível validar a conta RD Station. Conecte novamente.',
+      );
+    }
+
     const credentials = {
       accessToken: pending.accessToken,
       refreshToken: pending.refreshToken,
@@ -110,9 +117,9 @@ export class FinalizeRdStationUseCase {
         agencyId,
         companyId,
         provider: 'RD_STATION',
-        displayName: displayName ?? null,
+        displayName: displayName ?? test.name ?? null,
         credentialsEnc,
-        externalAccount: null,
+        externalAccount: test.name ?? null,
         status: 'ACTIVE',
         metadata: { oauth: 'true' } as Record<string, string>,
       },

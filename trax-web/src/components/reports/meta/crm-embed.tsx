@@ -9,9 +9,16 @@ interface Props {
   metaSummary: MetaSummary
 }
 
+function crmSourceLabel(source?: string, primarySource?: string): string {
+  if (primarySource === 'MERGED' || source === 'MERGED') return 'Combinado (RD + Nectar)'
+  if (primarySource === 'RD_STATION' || source === 'RD_STATION') return 'RD Station'
+  return 'Nectar CRM'
+}
+
 export function CrmEmbed({ crm, metaSummary }: Props) {
   if (!crm.pipeline) return null
 
+  const sourceLabel = crmSourceLabel(crm.source, crm.primarySource)
   const pipeline = crm.pipeline
   const contatos = pipeline.contatos ?? 0
   const qualificacao = pipeline.qualificacao ?? 0
@@ -45,7 +52,7 @@ export function CrmEmbed({ crm, metaSummary }: Props) {
     <div className="card p-5 border-[var(--color-border)]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold">CRM — origem Meta Ads</h3>
-        <span className="text-[10px] uppercase text-[var(--color-muted-foreground)]">Funil Nectar</span>
+        <span className="text-[10px] uppercase text-[var(--color-muted-foreground)]">{sourceLabel}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

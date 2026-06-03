@@ -37,6 +37,20 @@ describe('TenantMiddleware', () => {
     expect(prismaService.agency.findFirst).not.toHaveBeenCalled();
   });
 
+  it('deve pular tenant nos callbacks OAuth (host localhost sem subdomínio)', async () => {
+    for (const path of [
+      '/api/v1/integrations/google-ads/callback',
+      '/api/v1/integrations/meta/callback',
+      '/api/v1/integrations/rd-station/callback',
+    ]) {
+      const req = { path, headers: { host: 'localhost:3000' } } as any;
+      const next = jest.fn();
+      await middleware.use(req, {} as any, next);
+      expect(next).toHaveBeenCalled();
+    }
+    expect(prismaService.agency.findFirst).not.toHaveBeenCalled();
+  });
+
   it('deve pular a resolução de tenant para admin host', async () => {
     const req = { path: '/api/v1/clients', headers: { host: 'admin.traxsolucoes.com.br' } } as any;
     const res = {} as any;

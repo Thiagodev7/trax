@@ -17,6 +17,8 @@ interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   body?: unknown
   headers?: Record<string, string>
+  /** Timeout da requisição (ex.: sync RD pode levar vários minutos) */
+  timeoutMs?: number
 }
 
 export function useApiClient() {
@@ -25,7 +27,7 @@ export function useApiClient() {
 
   const request = useCallback(
     async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
-      const { method = 'GET', body, headers: extraHeaders = {} } = options
+      const { method = 'GET', body, headers: extraHeaders = {}, timeoutMs } = options
 
       const buildHeaders = (token?: string): Record<string, string> => {
         const headers: Record<string, string> = {
@@ -42,11 +44,13 @@ export function useApiClient() {
       }
 
       let token = accessToken
-      let res = await fetch(`${getPublicApiV1Base()}${path}`, {
+      const fetchInit: RequestInit = {
         method,
         headers: buildHeaders(token),
         body: body !== undefined ? JSON.stringify(body) : undefined,
-      })
+        ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
+      }
+      let res = await fetch(`${getPublicApiV1Base()}${path}`, fetchInit)
 
       if (res.status === 401 && update) {
         const updated = await update()
@@ -54,9 +58,8 @@ export function useApiClient() {
         if (newToken && newToken !== token) {
           token = newToken
           res = await fetch(`${getPublicApiV1Base()}${path}`, {
-            method,
+            ...fetchInit,
             headers: buildHeaders(token),
-            body: body !== undefined ? JSON.stringify(body) : undefined,
           })
         }
       }
@@ -76,7 +79,8 @@ export function useApiClient() {
     () => ({
       get: <T>(path: string, headers?: Record<string, string>) =>
         request<T>(path, { method: 'GET', headers }),
-      post: <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body }),
+      post: <T>(path: string, body: unknown, options?: { timeoutMs?: number }) =>
+        request<T>(path, { method: 'POST', body, ...options }),
       patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
       put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
       delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

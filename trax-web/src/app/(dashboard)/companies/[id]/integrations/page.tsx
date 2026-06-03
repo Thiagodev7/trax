@@ -75,12 +75,17 @@ export default async function ClientIntegrationsPage({
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {[
           { title: 'Meta Ads', desc: 'Campanhas, conjuntos, criativos, leads e gastos diários', icon: '📊' },
           { title: 'Google Ads', desc: 'Gastos, conversões, CPC, impression share e quality score', icon: '🎯' },
           { title: 'Instagram / Facebook', desc: 'Seguidores, alcance, engajamento e histórico de posts', icon: '📸' },
           { title: 'Nectar CRM', desc: 'Pipeline, vendas fechadas, receita e histórico mensal', icon: '🌿' },
+          {
+            title: 'RD Station',
+            desc: 'Leads por segmentação, enrich lifecycle (lotes), conversões diárias e CPL',
+            icon: '🚀',
+          },
         ].map((item) => (
           <div key={item.title} className="card p-4 border-[var(--color-border)] flex items-start gap-3">
             <span className="text-2xl">{item.icon}</span>

@@ -11,10 +11,15 @@ import { GetOrganicMetricsUseCase } from './application/use-cases/get-organic-me
 import { GetCrmMetricsUseCase } from './application/use-cases/get-crm-metrics.use-case';
 import { GetCalendarMetricsUseCase } from './application/use-cases/get-calendar-metrics.use-case';
 import { GetDashboardSummaryUseCase } from './application/use-cases/get-dashboard-summary.use-case';
+import { GetRdStationMetricsUseCase } from './application/use-cases/get-rd-station-metrics.use-case';
+import { GetNectarMetricsUseCase } from './application/use-cases/get-nectar-metrics.use-case';
+import { GetMarketingFunnelUseCase } from './application/use-cases/get-marketing-funnel.use-case';
 import { MetaConfigModule } from '@/modules/company/meta-config/meta-config.module';
+import { IntegrationModule } from '@/modules/integration/integration.module';
+import { RdOfficialFunnelService } from './application/services/rd-official-funnel.service';
 
 @Module({
-  imports: [MetaConfigModule],
+  imports: [MetaConfigModule, IntegrationModule],
   controllers: [MetricsController, SharedMetricsController, DashboardSummaryController],
   providers: [
     SharedReportAccessService,
@@ -26,6 +31,10 @@ import { MetaConfigModule } from '@/modules/company/meta-config/meta-config.modu
     GetCrmMetricsUseCase,
     GetCalendarMetricsUseCase,
     GetDashboardSummaryUseCase,
+    GetRdStationMetricsUseCase,
+    GetNectarMetricsUseCase,
+    GetMarketingFunnelUseCase,
+    RdOfficialFunnelService,
   ],
 })
 export class MetricsModule {}

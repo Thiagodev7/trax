@@ -269,7 +269,6 @@ model Integration {
 
 // ---------------------------------------------------------------------------
 // DAILY_METRIC — Cache de métricas por dia por integração
-// Estrutura análoga ao ALL_DATA do Tron dashboard
 // ---------------------------------------------------------------------------
 model DailyMetric {
   id            String   @id @default(uuid()) @db.Uuid
@@ -442,8 +441,10 @@ model CompanyMetaConfig {
   thresholds            Json
   // Fator multiplicador para alcance estimado (default 0.72)
   reachFactor           Float    @default(0.72)
-  // Cor da seção secundária (Rio Verde / segunda conta)
+  // Cor da seção de conta secundária
   secondaryAccountColor String   @default("#06B6D4") @db.VarChar(7)
+  // Label da seção de conta secundária (ex: "Filial SP", "Conta Institucional")
+  secondaryAccountLabel String   @default("Conta Secundária") @db.VarChar(100)
   // Janela em dias para sparklines (default 14)
   sparklineDays         Int      @default(14)
   createdAt             DateTime @default(now())

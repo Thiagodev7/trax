@@ -9,6 +9,7 @@ import {
   ArrowLeft, Calendar, Building2, Globe, Share2, CheckCircle, Clock,
   Copy, ExternalLink, Pencil, BarChart3
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { useSharedApiClient } from '@/lib/shared-api-client'
 import { reportMetricsPath } from '@/lib/report-metrics-path'
@@ -19,8 +20,20 @@ import { CalendarTab } from './tabs/calendar-tab'
 import { KpiTab } from './tabs/kpi-tab'
 import { GoogleAdsTab } from './tabs/google-ads-tab'
 import { LinkedInAdsTab } from './tabs/linkedin-ads-tab'
+import { RdStationTab } from './tabs/rd-station-tab'
+import { NectarCrmTab } from './tabs/nectar-crm-tab'
+import { MarketingFunnelTab } from './tabs/marketing-funnel-tab'
 
-type TabKey = 'META_ADS' | 'ORGANIC' | 'CALENDAR' | 'KPI' | 'GOOGLE_ADS' | 'LINKEDIN_ADS'
+type TabKey =
+  | 'META_ADS'
+  | 'ORGANIC'
+  | 'CALENDAR'
+  | 'KPI'
+  | 'GOOGLE_ADS'
+  | 'LINKEDIN_ADS'
+  | 'RD_STATION'
+  | 'NECTAR_CRM'
+  | 'MARKETING_FUNNEL'
 
 const TAB_META: Record<TabKey, { label: string; icon: string }> = {
   META_ADS: { label: 'Meta Ads', icon: '📊' },
@@ -29,6 +42,9 @@ const TAB_META: Record<TabKey, { label: string; icon: string }> = {
   KPI: { label: 'KPIs', icon: '📈' },
   GOOGLE_ADS: { label: 'Google Ads', icon: '🎯' },
   LINKEDIN_ADS: { label: 'LinkedIn Ads', icon: '💼' },
+  RD_STATION: { label: 'RD Station', icon: '🚀' },
+  NECTAR_CRM: { label: 'Nectar CRM', icon: '🌿' },
+  MARKETING_FUNNEL: { label: 'Funil', icon: '🔀' },
 }
 
 interface ModuleConfig {
@@ -65,6 +81,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
   const isPublic = !!shareToken
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { status: sessionStatus } = useSession()
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -98,7 +115,13 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
     }
   }, [api, report.id, shareToken, periodStart, periodEnd, enabledTabs])
 
-  useEffect(() => { fetchMetaSpend() }, [fetchMetaSpend])
+  useEffect(() => {
+    if (isPublic) {
+      fetchMetaSpend()
+      return
+    }
+    if (sessionStatus === 'authenticated') fetchMetaSpend()
+  }, [fetchMetaSpend, isPublic, sessionStatus])
 
   async function handlePublish() {
     try {
@@ -294,6 +317,25 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
               <GoogleAdsTab reportId={report.id} periodStart={periodStart} periodEnd={periodEnd} shareToken={shareToken} />
             )}
             {activeTab === 'LINKEDIN_ADS' && <LinkedInAdsTab />}
+            {activeTab === 'RD_STATION' && (
+              <RdStationTab
+                reportId={report.id}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                shareToken={shareToken}
+              />
+            )}
+            {activeTab === 'NECTAR_CRM' && (
+              <NectarCrmTab reportId={report.id} shareToken={shareToken} />
+            )}
+            {activeTab === 'MARKETING_FUNNEL' && (
+              <MarketingFunnelTab
+                reportId={report.id}
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                shareToken={shareToken}
+              />
+            )}
           </div>
         </>
       )}

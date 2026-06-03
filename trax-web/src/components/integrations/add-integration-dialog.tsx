@@ -84,8 +84,12 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
         'Acesse a sua conta no Nectar CRM.',
         'Vá em "Configurações" (ícone de engrenagem no menu lateral).',
         'Acesse a seção "Integrações" e depois "API".',
-        'Gere ou copie o seu "Token de API". A "Base URL" costuma ser https://app.nectarcrm.com.br.'
-      ]
+        'Gere ou copie o seu "Token de API". A "Base URL" costuma ser https://app.nectarcrm.com.br.',
+        'No Trax, o sync usa a API v1 (/crm/api/1/contatos e /oportunidades).',
+      ],
+      links: [
+        { label: 'Ajuda Nectar CRM', url: 'https://ajuda.nectarcrm.com.br/' },
+      ],
     }
   },
   {
@@ -100,6 +104,8 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
         'Clique em "Conectar com RD Station" para autorizar o acesso à sua conta.',
         'Faça login na sua conta RD Station Marketing e autorize o aplicativo Trax.',
         'Leads, conversões e métricas serão sincronizados automaticamente.',
+        'O sync lista contatos pela segmentação padrão (não usa /platform/contacts, que pode retornar 502).',
+        'Detalhes de lifecycle são buscados em lotes pequenos para respeitar o rate limit da API.',
       ],
       links: [
         { label: 'RD Station Marketing', url: 'https://app.rdstation.com.br/' },
@@ -125,6 +131,12 @@ const PROVIDERS: Array<{ value: IntegrationProvider; label: string; icon: string
       ],
     },
   },
+]
+
+const COMING_SOON_PROVIDERS: Array<{ label: string; icon: string }> = [
+  { label: 'Google Analytics 4', icon: '📈' },
+  { label: 'TikTok Ads', icon: '🎵' },
+  { label: 'LinkedIn Ads', icon: '💼' },
 ]
 
 interface FieldDef {
@@ -173,10 +185,20 @@ export function AddIntegrationDialog({ companyId, onAdded }: Props) {
   }
 
   async function handleMetaConnect() {
+    if (!selectedProvider?.metaOauth) return
     setConnectingOAuth(true)
     try {
       const returnUrl = getReturnUrl()
-      const params = new URLSearchParams({ scopeGroup: 'all' })
+      const scopeGroup =
+        selectedProvider.value === 'META_ADS'
+          ? 'ads'
+          : selectedProvider.value === 'FACEBOOK_PAGE'
+            ? 'pages'
+            : 'instagram'
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('meta_oauth_provider', selectedProvider.value)
+      }
+      const params = new URLSearchParams({ scopeGroup })
       if (returnUrl) params.set('returnUrl', returnUrl)
       const { url } = await api.get<{ url: string }>(
         `/companies/${companyId}/integrations/meta/connect?${params.toString()}`,
@@ -269,17 +291,35 @@ export function AddIntegrationDialog({ companyId, onAdded }: Props) {
             </div>
 
             {!selectedProvider ? (
-              <div className="grid grid-cols-2 gap-3">
-                {PROVIDERS.map((p) => (
-                  <button
-                    key={p.value}
-                    onClick={() => handleProviderSelect(p)}
-                    className="flex items-center gap-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-surface)] transition-all text-left"
-                  >
-                    <span className="text-2xl">{p.icon}</span>
-                    <span className="text-sm font-medium text-[var(--color-foreground)]">{p.label}</span>
-                  </button>
-                ))}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {PROVIDERS.map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => handleProviderSelect(p)}
+                      className="flex items-center gap-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-surface)] transition-all text-left"
+                    >
+                      <span className="text-2xl">{p.icon}</span>
+                      <span className="text-sm font-medium text-[var(--color-foreground)]">{p.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wide mb-2">
+                    Em breve
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {COMING_SOON_PROVIDERS.map((p) => (
+                      <div
+                        key={p.label}
+                        className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-[var(--color-border)] opacity-60 cursor-not-allowed"
+                      >
+                        <span className="text-lg">{p.icon}</span>
+                        <span className="text-xs text-[var(--color-muted-foreground)]">{p.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">

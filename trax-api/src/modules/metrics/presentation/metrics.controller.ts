@@ -9,6 +9,9 @@ import { GetGoogleAdsMetricsUseCase } from '../application/use-cases/get-google-
 import { GetOrganicMetricsUseCase } from '../application/use-cases/get-organic-metrics.use-case';
 import { GetCrmMetricsUseCase } from '../application/use-cases/get-crm-metrics.use-case';
 import { GetCalendarMetricsUseCase } from '../application/use-cases/get-calendar-metrics.use-case';
+import { GetRdStationMetricsUseCase } from '../application/use-cases/get-rd-station-metrics.use-case';
+import { GetNectarMetricsUseCase } from '../application/use-cases/get-nectar-metrics.use-case';
+import { GetMarketingFunnelUseCase } from '../application/use-cases/get-marketing-funnel.use-case';
 
 @ApiBearerAuth()
 @ApiTags('Metrics')
@@ -22,6 +25,9 @@ export class MetricsController {
     private readonly getOrganic: GetOrganicMetricsUseCase,
     private readonly getCrm: GetCrmMetricsUseCase,
     private readonly getCalendar: GetCalendarMetricsUseCase,
+    private readonly getRdStation: GetRdStationMetricsUseCase,
+    private readonly getNectar: GetNectarMetricsUseCase,
+    private readonly getMarketingFunnel: GetMarketingFunnelUseCase,
   ) {}
 
   @Get('meta-ads')
@@ -142,5 +148,47 @@ export class MetricsController {
     @Query('endDate') endDate?: string,
   ) {
     return this.getCalendar.execute({ agencyId, reportId, startDate, endDate });
+  }
+
+  @Get('rd-station')
+  @Version('1')
+  @ApiOperation({ summary: 'Métricas de RD Station Marketing do relatório' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  async rdStation(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('id', ParseUUIDPipe) reportId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.getRdStation.execute({ agencyId, reportId, startDate, endDate });
+  }
+
+  @Get('nectar')
+  @Version('1')
+  @ApiOperation({ summary: 'Métricas de Nectar CRM do relatório' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  async nectar(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('id', ParseUUIDPipe) reportId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.getNectar.execute({ agencyId, reportId, startDate, endDate });
+  }
+
+  @Get('marketing-funnel')
+  @Version('1')
+  @ApiOperation({ summary: 'Funil unificado Meta + Google + RD + Nectar' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  async marketingFunnel(
+    @CurrentTenant('agencyId') agencyId: string,
+    @Param('id', ParseUUIDPipe) reportId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.getMarketingFunnel.execute({ agencyId, reportId, startDate, endDate });
   }
 }

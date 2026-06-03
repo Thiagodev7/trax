@@ -14,7 +14,7 @@ export class SchedulingController {
   @ApiOperation({ summary: 'Listar posts agendados do cliente' })
   list(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) companyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
   ) {
     return this.scheduling.list(agencyId, companyId);
   }
@@ -24,7 +24,7 @@ export class SchedulingController {
   @ApiOperation({ summary: 'Agendar post orgânico' })
   create(
     @CurrentTenant('agencyId') agencyId: string,
-    @Param('clientId', ParseUUIDPipe) companyId: string,
+    @Param('companyId', ParseUUIDPipe) companyId: string,
     @Body() body: { platform: 'instagram' | 'facebook'; caption?: string; mediaUrl: string; scheduledAt: string },
   ) {
     return this.scheduling.create(agencyId, { ...body, companyId });

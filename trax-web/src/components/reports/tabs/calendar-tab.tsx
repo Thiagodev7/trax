@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Heart, MessageCircle, BookOpen } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useApiClient } from '@/lib/api-client-browser'
 import { useSharedApiClient } from '@/lib/shared-api-client'
 import { reportMetricsPath } from '@/lib/report-metrics-path'
@@ -49,6 +50,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 }
 
 export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, companyId, shareToken }: Props) {
+  const { status: sessionStatus } = useSession()
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -79,7 +81,19 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
     }
   }, [api, reportId, shareToken, periodStart, periodEnd])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (shareToken) {
+      fetchData()
+      return
+    }
+    if (sessionStatus === 'loading') return
+    if (sessionStatus === 'unauthenticated') {
+      setLoading(false)
+      setError('Sessão expirada. Faça login novamente.')
+      return
+    }
+    fetchData()
+  }, [fetchData, shareToken, sessionStatus])
 
   if (loading) {
     return <div className="card p-10 border-[var(--color-border)] animate-pulse h-96" />

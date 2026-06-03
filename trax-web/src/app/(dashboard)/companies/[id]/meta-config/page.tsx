@@ -48,7 +48,7 @@ export default async function MetaConfigPage({ params }: { params: Promise<{ id:
           </h2>
           <p className="text-sm text-[var(--color-muted-foreground)] mt-1 max-w-2xl">
             Defina produtos, estados, distribuição de verba e thresholds usados na tela Meta Ads.
-            Use &ldquo;Template Tron&rdquo; para carregar os valores padrão do tron-dashboard.
+            Use &ldquo;Aplicar template&rdquo; para carregar valores pré-configurados por segmento de mercado.
           </p>
         </div>
       </div>
