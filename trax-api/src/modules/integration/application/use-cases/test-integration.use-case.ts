@@ -37,9 +37,16 @@ export class TestIntegrationUseCase {
         case 'META_ADS':
           result = await this.metaAds.testConnection(creds as any);
           break;
-        case 'GOOGLE_ADS':
-          result = await this.googleAds.testConnection(creds as any);
+        case 'GOOGLE_ADS': {
+          const adsResult = await this.googleAds.testConnection(creds as any);
+          if (!adsResult.valid && adsResult.errorCode === 'DEVELOPER_TOKEN_NOT_APPROVED') {
+            throw new Error(
+              'Sincronização bloqueada pelo Google: Seu Token de Desenvolvedor está no nível "Test" e não pode consultar métricas reais. Solicite o acesso "Basic" no painel do Google Ads.',
+            );
+          }
+          result = adsResult;
           break;
+        }
         case 'INSTAGRAM':
           result = await this.instagram.testConnection(creds as any);
           break;

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-
-export interface GoogleAdsCredentials {
+import { GoogleAdsApi } from 'google-ads-api';export interface GoogleAdsCredentials {
   refreshToken: string;
   customerId: string;
   loginCustomerId?: string;
@@ -18,8 +17,6 @@ interface GoogleAdsRow {
   metrics?: Record<string, string | number | undefined>;
 }
 
-const API_VERSION = 'v18';
-const ADS_API = `https://googleads.googleapis.com/${API_VERSION}`;
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const ADWORDS_SCOPE = 'https://www.googleapis.com/auth/adwords';
 
@@ -47,6 +44,14 @@ export class GoogleAdsService {
 
   get developerToken(): string {
     return process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? '';
+  }
+
+  private getGoogleAdsClient() {
+    return new GoogleAdsApi({
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      developer_token: this.developerToken,
+    });
   }
 
   private get defaultLoginCustomerId(): string | undefined {
@@ -133,62 +138,47 @@ export class GoogleAdsService {
   }
 
   async listAccessibleCustomers(refreshToken: string): Promise<Array<{ id: string; formatted: string }>> {
-    const accessToken = await this.getAccessToken(refreshToken);
-    const res = await fetch(`${ADS_API}/customers:listAccessibleCustomers`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'developer-token': this.developerToken,
-      },
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(`Google Ads list customers: ${JSON.stringify(json).slice(0, 300)}`);
+    try {
+      const client = this.getGoogleAdsClient();
+      const response = await client.listAccessibleCustomers(refreshToken);
+      const ids = response.resource_names ?? (response as any).resourceNames ?? [];
+      return ids
+        .map((r: string) => r.replace('customers/', ''))
+        .filter(Boolean)
+        .map((id: string) => ({ id, formatted: this.formatCustomerId(id) }));
+    } catch (error: any) {
+      throw new Error(`Google Ads list customers: ${error.message}`);
     }
-    const ids = ((json as { resourceNames?: string[] }).resourceNames) ?? [];
-    return ids
-      .map((r) => r.replace('customers/', ''))
-      .filter(Boolean)
-      .map((id) => ({ id, formatted: this.formatCustomerId(id) }));
   }
 
   private async search(
     customerId: string,
     query: string,
-    accessToken: string,
+    refreshToken: string,
     loginCustomerId?: string,
   ): Promise<GoogleAdsRow[]> {
     const cid = this.normalizeCustomerId(customerId);
-    const login = loginCustomerId ?? this.defaultLoginCustomerId;
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${accessToken}`,
-      'developer-token': this.developerToken,
-      'Content-Type': 'application/json',
-    };
-    if (login) headers['login-customer-id'] = login;
+    const loginId = loginCustomerId ?? this.defaultLoginCustomerId;
+    
+    const client = this.getGoogleAdsClient();
+    const customer = client.Customer({
+      customer_id: cid,
+      refresh_token: refreshToken,
+      login_customer_id: loginId ? this.normalizeCustomerId(loginId) : undefined,
+    });
 
-    const rows: GoogleAdsRow[] = [];
-    let pageToken: string | undefined;
-
-    do {
-      const res = await fetch(`${ADS_API}/customers/${cid}/googleAds:search`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ query, pageToken }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg =
-          (json as { error?: { message?: string } })?.error?.message ??
-          JSON.stringify(json).slice(0, 400);
-        throw new Error(`Google Ads query failed: ${msg}`);
+    try {
+      const rows = await customer.query(query);
+      return rows as GoogleAdsRow[];
+    } catch (error: any) {
+      let msg = error.message ?? String(error);
+      if (error.errors && Array.isArray(error.errors)) {
+        msg = JSON.stringify(error.errors);
+      } else if (typeof error === 'object') {
+        msg = JSON.stringify(error);
       }
-      const results = ((json as { results?: GoogleAdsRow[] }).results) ?? [];
-      rows.push(...results);
-      pageToken = (json as { nextPageToken?: string }).nextPageToken;
-    } while (pageToken);
-
-    return rows;
+      throw new Error(`Google Ads query failed: ${msg}`);
+    }
   }
 
   private parseCtr(raw: number): number {
@@ -202,7 +192,6 @@ export class GoogleAdsService {
     startDate: string,
     endDate: string,
   ): Promise<Array<Record<string, unknown>>> {
-    const accessToken = await this.getAccessToken(creds.refreshToken);
     const loginId = creds.loginCustomerId
       ? this.normalizeCustomerId(creds.loginCustomerId)
       : this.defaultLoginCustomerId;
@@ -226,7 +215,7 @@ export class GoogleAdsService {
         AND campaign.status != 'REMOVED'
     `.trim();
 
-    const rows = await this.search(creds.customerId, query, accessToken, loginId);
+    const rows = await this.search(creds.customerId, query, creds.refreshToken, loginId);
 
     return rows.map((row) => {
       const m = row.metrics ?? {};
@@ -260,17 +249,16 @@ export class GoogleAdsService {
     });
   }
 
-  async testConnection(creds: GoogleAdsCredentials): Promise<{ valid: boolean; name?: string }> {
+  async testConnection(creds: GoogleAdsCredentials): Promise<{ valid: boolean; name?: string; errorCode?: string }> {
     try {
       if (!this.developerToken) {
         throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN não configurado no servidor.');
       }
-      const accessToken = await this.getAccessToken(creds.refreshToken);
       const loginId = creds.loginCustomerId
         ? this.normalizeCustomerId(creds.loginCustomerId)
         : this.defaultLoginCustomerId;
       const query = 'SELECT customer.descriptive_name FROM customer LIMIT 1';
-      const rows = await this.search(creds.customerId, query, accessToken, loginId);
+      const rows = await this.search(creds.customerId, query, creds.refreshToken, loginId);
       const name =
         rows[0]?.customer?.descriptiveName ??
         rows[0]?.customer?.descriptive_name ??
@@ -279,7 +267,14 @@ export class GoogleAdsService {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.warn(`Google Ads test failed: ${msg}`);
-      return { valid: false };
+      // Detecta especificamente o erro de token de desenvolvedor em nível "test"
+      const isTokenError =
+        msg.includes('authorization_error":10') ||
+        msg.includes('only approved for use with test accounts');
+      return {
+        valid: false,
+        errorCode: isTokenError ? 'DEVELOPER_TOKEN_NOT_APPROVED' : undefined,
+      };
     }
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useApiClient } from '@/lib/api-client-browser'
 import { toast } from 'sonner'
@@ -14,6 +15,7 @@ interface Props {
 
 export function GoogleAdsOAuthHandler({ companyId, onIntegrationAdded }: Props) {
   const searchParams = useSearchParams()
+  const { status } = useSession()
   const api = useApiClient()
   const [open, setOpen] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -21,20 +23,30 @@ export function GoogleAdsOAuthHandler({ companyId, onIntegrationAdded }: Props) 
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingLoad, setPendingLoad] = useState<string | null>(null)
 
+  // Detecta o redirect do Google OAuth nos search params
   useEffect(() => {
     const oauth = searchParams.get('google_oauth')
     const pid = searchParams.get('pendingId')
     if (oauth === 'pending' && pid) {
       setPendingId(pid)
       setOpen(true)
-      loadCustomers(pid)
+      setPendingLoad(pid)
       window.history.replaceState({}, '', window.location.pathname)
     } else if (oauth === 'error') {
       toast.error(searchParams.get('message') || 'Erro na conexão Google')
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [searchParams])
+
+  // Só carrega as contas quando a sessão estiver autenticada
+  useEffect(() => {
+    if (pendingLoad && status === 'authenticated') {
+      loadCustomers(pendingLoad)
+      setPendingLoad(null)
+    }
+  }, [pendingLoad, status])
 
   async function loadCustomers(pid: string) {
     setLoading(true)
@@ -51,6 +63,7 @@ export function GoogleAdsOAuthHandler({ companyId, onIntegrationAdded }: Props) 
       setLoading(false)
     }
   }
+
 
   async function handleFinalize() {
     if (!pendingId || !selectedCustomer) return

@@ -98,10 +98,14 @@ export class SyncIntegrationUseCase {
         data: { status: 'ACTIVE', lastSyncAt: new Date(), lastErrorMsg: null },
       });
     } catch (err: any) {
-      this.logger.error(`Sync failed for integration ${integration.id}: ${err.message}`);
+      let msg = err.message;
+      if (integration.provider === 'GOOGLE_ADS' && msg.includes('authorization_error":10')) {
+        msg = 'Sincronização bloqueada pelo Google: Seu Token de Desenvolvedor está no nível "Test" e não pode consultar métricas reais. Solicite o acesso "Basic" no painel do Google Ads.';
+      }
+      this.logger.error(`Sync failed for integration ${integration.id}: ${msg}`);
       await this.prisma.integration.update({
         where: { id: integration.id },
-        data: { status: 'ERROR', lastErrorMsg: err.message },
+        data: { status: 'ERROR', lastErrorMsg: msg },
       });
       await this.auditLog.record({
         agencyId: opts.agencyId,
@@ -111,9 +115,9 @@ export class SyncIntegrationUseCase {
         entityId: integration.id,
         entityName: integration.displayName ?? integration.provider,
         description: `Sync falhou: ${integration.provider}`,
-        metadata: { error: err.message, synced: 0 },
+        metadata: { error: msg, synced: 0 },
       });
-      throw new BadRequestException(err.message);
+      throw new BadRequestException(msg);
     }
 
     await this.auditLog.record({

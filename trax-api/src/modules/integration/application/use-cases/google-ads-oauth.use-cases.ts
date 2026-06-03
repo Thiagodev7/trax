@@ -90,7 +90,11 @@ export class FinalizeGoogleAdsOAuthUseCase {
     };
 
     const test = await this.googleAds.testConnection(credentials);
-    if (!test.valid) {
+    // Se o token do desenvolvedor ainda é nível "test", o Google bloqueia queries a contas reais,
+    // mas o OAuth já confirma a autorização do usuário. Salvamos a integração assim mesmo —
+    // quando o token for aprovado para Basic/Standard, a sincronização funcionará automaticamente.
+    const isTokenAccessError = !test.valid && test.errorCode === 'DEVELOPER_TOKEN_NOT_APPROVED';
+    if (!test.valid && !isTokenAccessError) {
       throw new BadRequestException('Não foi possível validar a conta Google Ads selecionada.');
     }
 
