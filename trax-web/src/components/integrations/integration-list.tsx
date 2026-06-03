@@ -91,11 +91,11 @@ function StatusBadge({ status }: { status: IntegrationStatus }) {
 }
 
 interface Props {
-  clientId: string
+  companyId: string
   initialIntegrations: Integration[]
 }
 
-export function IntegrationList({ clientId, initialIntegrations }: Props) {
+export function IntegrationList({ companyId, initialIntegrations }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>(initialIntegrations)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [testing, setTesting] = useState<string | null>(null)
@@ -147,18 +147,18 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
     setReconnecting(integration.id)
     try {
       const returnUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/clients/${clientId}/integrations`
+        ? `${window.location.origin}/companies/${companyId}/integrations`
         : undefined
       const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
 
       let endpoint = ''
       if (integration.provider === 'GOOGLE_ADS') {
-        endpoint = `/clients/${clientId}/integrations/google-ads/connect${params}`
+        endpoint = `/companies/${companyId}/integrations/google-ads/connect${params}`
       } else if (['META_ADS', 'INSTAGRAM', 'FACEBOOK_PAGE'].includes(integration.provider)) {
         const scopeGroup = integration.provider === 'META_ADS' ? 'ads' : 'instagram'
-        endpoint = `/clients/${clientId}/integrations/meta/connect?scopeGroup=${scopeGroup}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+        endpoint = `/companies/${companyId}/integrations/meta/connect?scopeGroup=${scopeGroup}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
       } else if (integration.provider === 'RD_STATION') {
-        endpoint = `/clients/${clientId}/integrations/rd-station/connect${params}`
+        endpoint = `/companies/${companyId}/integrations/rd-station/connect${params}`
       }
 
       if (!endpoint) { toast.error('Reconexão não suportada para este provider.'); return }
@@ -193,15 +193,15 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
   return (
     <div className="space-y-4">
       <Suspense fallback={null}>
-        <GoogleAdsOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
-        <MetaOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
-        <RdStationOAuthHandler clientId={clientId} onIntegrationAdded={handleAdded} />
+        <GoogleAdsOAuthHandler companyId={companyId} onIntegrationAdded={handleAdded} />
+        <MetaOAuthHandler companyId={companyId} onIntegrationAdded={handleAdded} />
+        <RdStationOAuthHandler companyId={companyId} onIntegrationAdded={handleAdded} />
       </Suspense>
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--color-muted-foreground)]">
           {integrations.length} integração{integrations.length !== 1 ? 'ões' : ''} configurada{integrations.length !== 1 ? 's' : ''}
         </p>
-        <AddIntegrationDialog clientId={clientId} onAdded={handleAdded} />
+        <AddIntegrationDialog companyId={companyId} onAdded={handleAdded} />
       </div>
 
       {integrations.length === 0 ? (
@@ -211,7 +211,7 @@ export function IntegrationList({ clientId, initialIntegrations }: Props) {
           <p className="text-sm text-[var(--color-muted-foreground)] mt-1 mb-4">
             Conecte plataformas de marketing para sincronizar dados automaticamente.
           </p>
-          <AddIntegrationDialog clientId={clientId} onAdded={handleAdded} />
+          <AddIntegrationDialog companyId={companyId} onAdded={handleAdded} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

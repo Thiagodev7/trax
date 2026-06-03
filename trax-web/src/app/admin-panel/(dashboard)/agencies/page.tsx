@@ -124,7 +124,7 @@ export default async function AgenciesPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                {['Agência', 'Plano', 'Clientes', 'Usuários', 'Relatórios', 'Status', 'Criada em', ''].map((h) => (
+                {['Agência', 'Plano', 'Empresas', 'Usuários', 'Relatórios', 'Status', 'Criada em', ''].map((h) => (
                   <th key={h || 'actions'} className="px-6 py-4 text-left text-xs font-semibold text-white/40 uppercase tracking-wider">
                     {h}
                   </th>
@@ -167,8 +167,8 @@ export default async function AgenciesPage({
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
                           <Activity className="w-3.5 h-3.5 text-white/25" />
-                          <span className="font-semibold text-white">{agency._count.clients}</span>
-                          <span className="text-white/30">/ {agency.maxClients}</span>
+                          <span className="font-semibold text-white">{agency._count.companies}</span>
+                          <span className="text-white/30">/ {agency.maxCompanies}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

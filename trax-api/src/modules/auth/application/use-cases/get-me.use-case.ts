@@ -18,7 +18,7 @@ export class GetMeUseCase {
         lastLoginAt: true,
         notifyReportPublished: true,
         notifyIntegrationErrors: true,
-        notifyNewClient: true,
+        notifyNewCompany: true,
         notifyWeeklySummary: true,
         createdAt: true,
         agency: {
@@ -33,10 +33,10 @@ export class GetMeUseCase {
             accentColor: true,
           },
         },
-        // Para CLIENT_VIEWER: quais clientes ele pode ver
-        userClients: {
+        // Para COMPANY_VIEWER: quais empresas ele pode ver
+        userCompanies: {
           select: {
-            client: {
+            company: {
               select: { id: true, name: true, logoUrl: true },
             },
           },
@@ -58,11 +58,11 @@ export class GetMeUseCase {
       notifications: {
         notifyReportPublished: user.notifyReportPublished,
         notifyIntegrationErrors: user.notifyIntegrationErrors,
-        notifyNewClient: user.notifyNewClient,
+        notifyNewCompany: user.notifyNewCompany,
         notifyWeeklySummary: user.notifyWeeklySummary,
       },
       agency: user.agency,
-      clients: user.userClients.map((uc) => uc.client),
+      companies: user.userCompanies.map((uc) => uc.company),
     };
   }
 }

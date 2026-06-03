@@ -5,13 +5,13 @@ import { PrismaService } from '@/prisma/prisma.service';
 export class ListIntegrationsUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(agencyId: string, clientId: string) {
-    await this.prisma.client.findFirstOrThrow({
-      where: { id: clientId, agencyId },
+  async execute(agencyId: string, companyId: string) {
+    await this.prisma.company.findFirstOrThrow({
+      where: { id: companyId, agencyId },
     });
 
     return this.prisma.integration.findMany({
-      where: { agencyId, clientId },
+      where: { agencyId, companyId },
       select: {
         id: true,
         provider: true,

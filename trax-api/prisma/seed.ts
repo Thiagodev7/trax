@@ -1,13 +1,13 @@
 /**
  * Trax — Seed de desenvolvimento
- * Cria uma agência demo com admin, viewer e cliente com relatórios.
+ * Cria uma agência demo com admin, viewer e empresa com relatórios.
  *
  * Executar: npm run db:seed
  */
 import { PrismaClient, UserRole, ReportStatus, AgencyPlan, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { TRON_TEMPLATE } from '../src/modules/client/meta-config/meta-config.template';
+import { TRON_TEMPLATE } from '../src/modules/company/meta-config/meta-config.template';
 
 const prisma = new PrismaClient();
 
@@ -49,7 +49,7 @@ async function main() {
       accentColor: '#F59E0B',
       fontFamily: 'Inter',
       plan: AgencyPlan.PRO,
-      maxClients: 20,
+      maxCompanies: 20,
       maxUsers: 10,
       isActive: true,
       trialEndsAt: null,
@@ -63,7 +63,7 @@ async function main() {
   // ─────────────────────────────────────────────────────
   const adminPassword = await bcrypt.hash('admin123!', BCRYPT_ROUNDS);
   const viewerPassword = await bcrypt.hash('viewer123!', BCRYPT_ROUNDS);
-  const clientPassword = await bcrypt.hash('cliente123!', BCRYPT_ROUNDS);
+  const companyPassword = await bcrypt.hash('cliente123!', BCRYPT_ROUNDS);
 
   const adminUser = await prisma.user.upsert({
     where: { agencyId_email: { agencyId: agency.id, email: 'admin@agenciademo.com' } },
@@ -95,9 +95,9 @@ async function main() {
   console.log(`✅ Usuário viewer: ${viewerUser.email} | senha: viewer123!`);
 
   // ─────────────────────────────────────────────────────
-  // 3. Clientes da agência
+  // 3. Empresas da agência
   // ─────────────────────────────────────────────────────
-  const client1 = await prisma.client.upsert({
+  const company1 = await prisma.company.upsert({
     where: { id: 'aaaaaaaa-0001-0000-0000-000000000001' },
     update: {},
     create: {
@@ -111,7 +111,7 @@ async function main() {
     },
   });
 
-  const client2 = await prisma.client.upsert({
+  const company2 = await prisma.company.upsert({
     where: { id: 'aaaaaaaa-0001-0000-0000-000000000002' },
     update: {},
     create: {
@@ -125,12 +125,12 @@ async function main() {
     },
   });
 
-  console.log(`✅ Clientes: ${client1.name}, ${client2.name}`);
+  console.log(`✅ Empresas: ${company1.name}, ${company2.name}`);
 
   // ─────────────────────────────────────────────────────
-  // 3b. Cliente Tron Sistemas com configuração Meta Ads
+  // 3b. Empresa Tron Sistemas com configuração Meta Ads
   // ─────────────────────────────────────────────────────
-  const tronClient = await prisma.client.upsert({
+  const tronCompany = await prisma.company.upsert({
     where: { id: 'aaaaaaaa-0001-0000-0000-000000000003' },
     update: {},
     create: {
@@ -144,8 +144,8 @@ async function main() {
     },
   });
 
-  await (prisma as any).clientMetaConfig.upsert({
-    where: { clientId: tronClient.id },
+  await (prisma as any).companyMetaConfig.upsert({
+    where: { companyId: tronCompany.id },
     update: {
       products: TRON_TEMPLATE.products as any,
       states: TRON_TEMPLATE.states as any,
@@ -156,7 +156,7 @@ async function main() {
       sparklineDays: TRON_TEMPLATE.sparklineDays,
     },
     create: {
-      clientId: tronClient.id,
+      companyId: tronCompany.id,
       products: TRON_TEMPLATE.products as any,
       states: TRON_TEMPLATE.states as any,
       stateBudgetByProduct: TRON_TEMPLATE.stateBudgetByProduct as any,
@@ -167,35 +167,35 @@ async function main() {
     },
   });
 
-  console.log(`✅ Cliente Tron Sistemas + meta-config aplicada (${TRON_TEMPLATE.products.length} produtos, ${TRON_TEMPLATE.states.length} UFs)`);
+  console.log(`✅ Empresa Tron Sistemas + meta-config aplicada (${TRON_TEMPLATE.products.length} produtos, ${TRON_TEMPLATE.states.length} UFs)`);
 
   // ─────────────────────────────────────────────────────
-  // 4. Usuário CLIENT_VIEWER vinculado ao client1
+  // 4. Usuário COMPANY_VIEWER vinculado à company1
   // ─────────────────────────────────────────────────────
-  const clientViewer = await prisma.user.upsert({
+  const companyViewer = await prisma.user.upsert({
     where: { agencyId_email: { agencyId: agency.id, email: 'contato@techstore.com.br' } },
-    update: { passwordHash: clientPassword },
+    update: { passwordHash: companyPassword },
     create: {
       agencyId: agency.id,
       email: 'contato@techstore.com.br',
-      passwordHash: clientPassword,
+      passwordHash: companyPassword,
       name: 'João TechStore',
-      role: UserRole.CLIENT_VIEWER,
+      role: UserRole.COMPANY_VIEWER,
       isActive: true,
     },
   });
 
-  await prisma.userClient.upsert({
-    where: { userId_clientId: { userId: clientViewer.id, clientId: client1.id } },
+  await prisma.userCompany.upsert({
+    where: { userId_companyId: { userId: companyViewer.id, companyId: company1.id } },
     update: {},
     create: {
-      userId: clientViewer.id,
-      clientId: client1.id,
+      userId: companyViewer.id,
+      companyId: company1.id,
       agencyId: agency.id,
     },
   });
 
-  console.log(`✅ Client viewer: ${clientViewer.email} | senha: cliente123!`);
+  console.log(`✅ Company viewer: ${companyViewer.email} | senha: cliente123!`);
 
   // ─────────────────────────────────────────────────────
   // 5. Relatórios demo
@@ -208,7 +208,7 @@ async function main() {
     create: {
       id: 'bbbbbbbb-0001-0000-0000-000000000001',
       agencyId: agency.id,
-      clientId: client1.id,
+      companyId: company1.id,
       title: 'Relatório Google Ads — Maio 2026',
       description: 'Performance das campanhas de busca e display no mês de Maio.',
       status: ReportStatus.PUBLISHED,
@@ -235,7 +235,7 @@ async function main() {
     create: {
       id: 'bbbbbbbb-0001-0000-0000-000000000002',
       agencyId: agency.id,
-      clientId: client2.id,
+      companyId: company2.id,
       title: 'Relatório Meta Ads — Abril 2026',
       description: 'Resultados das campanhas de alcance e conversão no Facebook e Instagram.',
       status: ReportStatus.DRAFT,
@@ -265,9 +265,9 @@ async function main() {
   console.log(`   URL base: ${agencyUrl}`);
   console.log(`   Header alternativo: X-Agency-Domain: agenciademo.${baseDomain}`);
   console.log(`\n👤 Credenciais:`);
-  console.log(`   AGENCY_ADMIN  → admin@agenciademo.com / admin123!`);
-  console.log(`   AGENCY_VIEWER → viewer@agenciademo.com / viewer123!`);
-  console.log(`   CLIENT_VIEWER → contato@techstore.com.br / cliente123!`);
+  console.log(`   AGENCY_ADMIN   → admin@agenciademo.com / admin123!`);
+  console.log(`   AGENCY_VIEWER  → viewer@agenciademo.com / viewer123!`);
+  console.log(`   COMPANY_VIEWER → contato@techstore.com.br / cliente123!`);
   console.log(`\n🔗 Relatório público (sem login):`);
   console.log(`   GET /api/v1/reports/shared/${shareToken}`);
   console.log(`\n🔐 Super-Admin:`);

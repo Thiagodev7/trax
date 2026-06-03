@@ -8,11 +8,11 @@ import { toast } from 'sonner'
 import type { Integration } from './integration-list'
 
 interface Props {
-  clientId: string
+  companyId: string
   onIntegrationAdded: (integration: Integration) => void
 }
 
-export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
+export function GoogleAdsOAuthHandler({ companyId, onIntegrationAdded }: Props) {
   const searchParams = useSearchParams()
   const api = useApiClient()
   const [open, setOpen] = useState(false)
@@ -40,7 +40,7 @@ export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     setLoading(true)
     try {
       const list = await api.get<Array<{ id: string; formatted: string }>>(
-        `/clients/${clientId}/integrations/google-ads/customers?pendingId=${pid}`,
+        `/companies/${companyId}/integrations/google-ads/customers?pendingId=${pid}`,
       )
       setCustomers(list)
       if (list.length === 1) setSelectedCustomer(list[0].id)
@@ -57,7 +57,7 @@ export function GoogleAdsOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     setLoading(true)
     try {
       const integration = await api.post<Integration>(
-        `/clients/${clientId}/integrations/google-ads/finalize`,
+        `/companies/${companyId}/integrations/google-ads/finalize`,
         {
           pendingId,
           customerId: selectedCustomer,

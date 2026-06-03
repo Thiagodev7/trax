@@ -42,20 +42,20 @@ export class PublishScheduledPostsScheduler {
 
   private async publish(post: {
     platform: ScheduledPostPlatform;
-    clientId: string;
+    companyId: string;
     caption: string | null;
     mediaUrl: string;
   }): Promise<string> {
     const integration = await this.prisma.integration.findFirst({
       where: {
-        clientId: post.clientId,
+        companyId: post.companyId,
         status: 'ACTIVE',
         provider: post.platform === ScheduledPostPlatform.INSTAGRAM ? 'INSTAGRAM' : 'FACEBOOK_PAGE',
       },
     });
 
     if (!integration?.credentialsEnc) {
-      throw new Error('Integração orgânica não configurada para este cliente.');
+      throw new Error('Integração orgânica não configurada para esta empresa.');
     }
 
     const creds = decryptCredentials(integration.credentialsEnc);

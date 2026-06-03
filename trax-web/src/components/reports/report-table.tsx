@@ -23,7 +23,7 @@ interface Report {
   publishedAt: string | null
   createdAt: string
   shareToken: string | null
-  client: {
+  company: {
     id: string
     name: string
     logoUrl: string | null
@@ -79,7 +79,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
     return reports.filter((r) => {
       const matchSearch =
         r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.client.name.toLowerCase().includes(search.toLowerCase())
+        r.company.name.toLowerCase().includes(search.toLowerCase())
       const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
       return matchSearch && matchStatus
     })
@@ -173,7 +173,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
             <thead className="text-xs text-[var(--color-muted-foreground)] uppercase bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
               <tr>
                 <th className="px-6 py-4 font-medium">Relatório</th>
-                <th className="px-6 py-4 font-medium">Cliente</th>
+                <th className="px-6 py-4 font-medium">Empresa</th>
                 <th className="px-6 py-4 font-medium">Período</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
@@ -212,7 +212,7 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
                         <div className="space-y-1.5 text-center">
                           <p className="text-lg font-bold text-[var(--color-foreground)]">Crie seu primeiro relatório</p>
                           <p className="text-sm text-[var(--color-muted-foreground)] leading-relaxed max-w-sm mx-auto">
-                            Monte relatórios profissionais com dados reais e compartilhe com seus clientes com um clique.
+                            Monte relatórios profissionais com dados reais e compartilhe com suas empresas com um clique.
                           </p>
                         </div>
 
@@ -266,26 +266,26 @@ export function ReportTable({ initialReports = [] }: ReportTableProps) {
                       </div>
                     </td>
 
-                    {/* Cliente */}
+                    {/* Empresa */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {report.client.logoUrl ? (
+                        {report.company.logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={report.client.logoUrl}
-                            alt={report.client.name}
+                            src={report.company.logoUrl}
+                            alt={report.company.name}
                             className="w-6 h-6 rounded border border-[var(--color-border)]"
                           />
                         ) : (
                           <div className="w-6 h-6 rounded bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] font-bold text-xs">
-                            {report.client.name[0]}
+                            {report.company.name[0]}
                           </div>
                         )}
                         <Link
-                          href={`/reports?clientId=${report.client.id}`}
+                          href={`/reports?companyId=${report.company.id}`}
                           className="text-[var(--color-foreground)] hover:text-[var(--color-primary)] transition-colors"
                         >
-                          {report.client.name}
+                          {report.company.name}
                         </Link>
                       </div>
                     </td>

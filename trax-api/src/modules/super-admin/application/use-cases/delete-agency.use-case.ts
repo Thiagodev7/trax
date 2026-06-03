@@ -7,7 +7,7 @@ export interface AgencyDeletePreview {
   agency: { id: string; name: string; slug: string };
   counts: {
     users: number;
-    clients: number;
+    companies: number;
     reports: number;
     integrations: number;
   };
@@ -28,16 +28,16 @@ export class DeleteAgencyUseCase {
 
     if (!agency) throw new NotFoundException('Agência não encontrada');
 
-    const [users, clients, reports, integrations] = await Promise.all([
+    const [users, companies, reports, integrations] = await Promise.all([
       this.prisma.user.count({ where: { agencyId } }),
-      this.prisma.client.count({ where: { agencyId } }),
+      this.prisma.company.count({ where: { agencyId } }),
       this.prisma.report.count({ where: { agencyId } }),
       this.prisma.integration.count({ where: { agencyId } }),
     ]);
 
     return {
       agency,
-      counts: { users, clients, reports, integrations },
+      counts: { users, companies, reports, integrations },
     };
   }
 

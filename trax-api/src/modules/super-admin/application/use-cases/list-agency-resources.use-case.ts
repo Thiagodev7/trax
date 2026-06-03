@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
-export class ListAgencyClientsUseCase {
+export class ListAgencyCompaniesUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(agencyId: string) {
@@ -12,7 +12,7 @@ export class ListAgencyClientsUseCase {
     });
     if (!agency) throw new NotFoundException('Agência não encontrada');
 
-    return this.prisma.client.findMany({
+    return this.prisma.company.findMany({
       where: { agencyId },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -51,7 +51,7 @@ export class ListAgencyIntegrationsUseCase {
         lastSyncAt: true,
         lastErrorMsg: true,
         updatedAt: true,
-        client: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true } },
       },
     });
   }

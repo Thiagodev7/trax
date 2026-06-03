@@ -11,7 +11,7 @@ import { GetOrganicMetricsUseCase } from './application/use-cases/get-organic-me
 import { GetCrmMetricsUseCase } from './application/use-cases/get-crm-metrics.use-case';
 import { GetCalendarMetricsUseCase } from './application/use-cases/get-calendar-metrics.use-case';
 import { GetDashboardSummaryUseCase } from './application/use-cases/get-dashboard-summary.use-case';
-import { MetaConfigModule } from '@/modules/client/meta-config/meta-config.module';
+import { MetaConfigModule } from '@/modules/company/meta-config/meta-config.module';
 
 @Module({
   imports: [MetaConfigModule],

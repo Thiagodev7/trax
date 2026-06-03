@@ -9,7 +9,7 @@ import { CheckCircle2, ChevronRight } from 'lucide-react'
 import type { Integration } from './integration-list'
 
 interface Props {
-  clientId: string
+  companyId: string
   onIntegrationAdded: (integration: Integration) => void
 }
 
@@ -27,7 +27,7 @@ interface PageEntry {
 
 type Step = 'choose' | 'ads' | 'instagram_page' | 'facebook_page'
 
-export function MetaOAuthHandler({ clientId, onIntegrationAdded }: Props) {
+export function MetaOAuthHandler({ companyId, onIntegrationAdded }: Props) {
   const searchParams = useSearchParams()
   const api = useApiClient()
 
@@ -59,7 +59,7 @@ export function MetaOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     setLoading(true)
     try {
       const list = await api.get<AdAccount[]>(
-        `/clients/${clientId}/integrations/meta/ad-accounts?pendingId=${pid}`,
+        `/companies/${companyId}/integrations/meta/ad-accounts?pendingId=${pid}`,
       )
       setAdAccounts(list)
       if (list.length === 1) setSelectedAdAccount(list[0].id)
@@ -75,7 +75,7 @@ export function MetaOAuthHandler({ clientId, onIntegrationAdded }: Props) {
     setLoading(true)
     try {
       const list = await api.get<PageEntry[]>(
-        `/clients/${clientId}/integrations/meta/pages?pendingId=${pid}`,
+        `/companies/${companyId}/integrations/meta/pages?pendingId=${pid}`,
       )
       setPages(list)
       if (list.length === 1) setSelectedPage(list[0].id)
@@ -113,7 +113,7 @@ export function MetaOAuthHandler({ clientId, onIntegrationAdded }: Props) {
       }
 
       const integration = await api.post<Integration>(
-        `/clients/${clientId}/integrations/meta/finalize`,
+        `/companies/${companyId}/integrations/meta/finalize`,
         body,
       )
       const labels: Record<string, string> = {

@@ -8,7 +8,7 @@ export interface PlatformStats {
   inactiveAgencies: number;
   totalUsers: number;
   activeUsers: number;
-  totalClients: number;
+  totalCompanies: number;
   totalReports: number;
   trialsExpiringSoon: number;
   expiredTrials: number;
@@ -24,11 +24,11 @@ export interface PlatformStats {
     plan: string;
     createdAt: Date;
   }>;
-  topAgenciesByClients: Array<{
+  topAgenciesByCompanies: Array<{
     id: string;
     name: string;
     slug: string;
-    clientCount: number;
+    companyCount: number;
   }>;
 }
 
@@ -49,7 +49,7 @@ export class GetStatsUseCase {
       inactiveAgencies,
       totalUsers,
       activeUsers,
-      totalClients,
+      totalCompanies,
       totalReports,
       trialsExpiringSoon,
       expiredTrials,
@@ -58,14 +58,14 @@ export class GetStatsUseCase {
       failedSyncsLast24h,
       agenciesByPlanRaw,
       recentAgencies,
-      allAgenciesWithClientCounts,
+      allAgenciesWithCompanyCounts,
     ] = await Promise.all([
       this.prisma.agency.count(),
       this.prisma.agency.count({ where: { isActive: true } }),
       this.prisma.agency.count({ where: { isActive: false } }),
       this.prisma.user.count(),
       this.prisma.user.count({ where: { isActive: true } }),
-      this.prisma.client.count(),
+      this.prisma.company.count(),
       this.prisma.report.count(),
       this.prisma.agency.count({
         where: {
@@ -80,7 +80,7 @@ export class GetStatsUseCase {
       }),
       this.prisma.agency.count({
         where: {
-          clients: {
+          companies: {
             some: {
               integrations: { some: {} },
             },
@@ -110,9 +110,9 @@ export class GetStatsUseCase {
           id: true,
           name: true,
           slug: true,
-          _count: { select: { clients: true } },
+          _count: { select: { companies: true } },
         },
-        orderBy: { clients: { _count: 'desc' } },
+        orderBy: { companies: { _count: 'desc' } },
         take: 5,
       }),
     ]);
@@ -122,11 +122,11 @@ export class GetStatsUseCase {
       agenciesByPlan[row.plan] = row._count.plan;
     }
 
-    const topAgenciesByClients = allAgenciesWithClientCounts.map((a) => ({
+    const topAgenciesByCompanies = allAgenciesWithCompanyCounts.map((a) => ({
       id: a.id,
       name: a.name,
       slug: a.slug,
-      clientCount: a._count.clients,
+      companyCount: a._count.companies,
     }));
 
     return {
@@ -135,7 +135,7 @@ export class GetStatsUseCase {
       inactiveAgencies,
       totalUsers,
       activeUsers,
-      totalClients,
+      totalCompanies,
       totalReports,
       trialsExpiringSoon,
       expiredTrials,
@@ -145,7 +145,7 @@ export class GetStatsUseCase {
       agenciesByPlan,
       agenciesByStatus: { active: activeAgencies, inactive: inactiveAgencies },
       recentAgencies,
-      topAgenciesByClients,
+      topAgenciesByCompanies,
     };
   }
 }

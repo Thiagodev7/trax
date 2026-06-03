@@ -22,7 +22,7 @@ const REDIS_PREFIX = 'oauth:rds:pending:';
 
 export interface RdsPendingOAuth {
   agencyId: string;
-  clientId: string;
+  companyId: string;
   accessToken: string;
   refreshToken: string;
   returnUrl?: string;
@@ -69,14 +69,14 @@ export class RdStationOAuthService {
     return process.env.WEB_APP_URL ?? process.env.CORS_ORIGINS?.split(',')[0]?.trim() ?? 'http://localhost:3001';
   }
 
-  private signState(payload: { agencyId: string; clientId: string; returnUrl?: string; nonce: string }): string {
+  private signState(payload: { agencyId: string; companyId: string; returnUrl?: string; nonce: string }): string {
     const secret = process.env.JWT_SECRET ?? 'dev-secret';
     const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const sig = createHmac('sha256', secret).update(data).digest('base64url');
     return `${data}.${sig}`;
   }
 
-  verifyState(state: string): { agencyId: string; clientId: string; returnUrl?: string } {
+  verifyState(state: string): { agencyId: string; companyId: string; returnUrl?: string } {
     const [data, sig] = state.split('.');
     if (!data || !sig) throw new BadRequestException('State OAuth inválido.');
     const secret = process.env.JWT_SECRET ?? 'dev-secret';
@@ -104,9 +104,9 @@ export class RdStationOAuthService {
     }
   }
 
-  buildConnectUrl(agencyId: string, clientId: string, returnUrl?: string): string {
+  buildConnectUrl(agencyId: string, companyId: string, returnUrl?: string): string {
     const state = this.signState({
-      agencyId, clientId,
+      agencyId, companyId,
       returnUrl: this.validateReturnUrl(returnUrl),
       nonce: randomBytes(16).toString('hex'),
     });
@@ -189,7 +189,7 @@ export class RdStationOAuthService {
     }
     const e = rdsMemFallback.get(id);
     if (!e || e.expiresAt < Date.now()) { rdsMemFallback.delete(id); return null; }
-    return { agencyId: e.agencyId, clientId: e.clientId, accessToken: e.accessToken, refreshToken: e.refreshToken };
+    return { agencyId: e.agencyId, companyId: e.companyId, accessToken: e.accessToken, refreshToken: e.refreshToken };
   }
 
   async consumePending(id: string): Promise<RdsPendingOAuth | null> {
@@ -207,11 +207,11 @@ export class RdStationOAuthService {
     const pendingId = randomBytes(24).toString('hex');
     await this.storePending(pendingId, {
       agencyId: payload.agencyId,
-      clientId: payload.clientId,
+      companyId: payload.companyId,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
     });
-    const base = payload.returnUrl ?? `${this.getWebAppUrl()}/clients/${payload.clientId}/integrations`;
+    const base = payload.returnUrl ?? `${this.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
     const sep = base.includes('?') ? '&' : '?';
     return {
       pendingId,

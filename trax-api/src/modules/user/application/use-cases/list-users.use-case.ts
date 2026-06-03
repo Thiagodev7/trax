@@ -17,9 +17,9 @@ export class ListUsersUseCase {
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
-        userClients: {
+        userCompanies: {
           select: {
-            client: { select: { id: true, name: true } },
+            company: { select: { id: true, name: true } },
           },
         },
       },

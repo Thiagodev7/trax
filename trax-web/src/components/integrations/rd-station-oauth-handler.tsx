@@ -9,11 +9,11 @@ import { CheckCircle2 } from 'lucide-react'
 import type { Integration } from './integration-list'
 
 interface Props {
-  clientId: string
+  companyId: string
   onIntegrationAdded: (integration: Integration) => void
 }
 
-export function RdStationOAuthHandler({ clientId, onIntegrationAdded }: Props) {
+export function RdStationOAuthHandler({ companyId, onIntegrationAdded }: Props) {
   const searchParams = useSearchParams()
   const api = useApiClient()
 
@@ -42,7 +42,7 @@ export function RdStationOAuthHandler({ clientId, onIntegrationAdded }: Props) {
       const params = new URLSearchParams({ pendingId })
       if (displayName) params.set('displayName', displayName)
       const integration = await api.post<Integration>(
-        `/clients/${clientId}/integrations/rd-station/finalize?${params.toString()}`,
+        `/companies/${companyId}/integrations/rd-station/finalize?${params.toString()}`,
         {},
       )
       toast.success('RD Station conectado com sucesso!')

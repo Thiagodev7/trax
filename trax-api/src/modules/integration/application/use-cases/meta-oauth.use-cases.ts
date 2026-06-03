@@ -21,16 +21,16 @@ export class ConnectMetaUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  execute(agencyId: string, clientId: string, scopeGroup: ScopeGroup = 'all', returnUrl?: string): { url: string } {
-    const url = this.oauth.buildConnectUrl(agencyId, clientId, scopeGroup, returnUrl);
+  execute(agencyId: string, companyId: string, scopeGroup: ScopeGroup = 'all', returnUrl?: string): { url: string } {
+    const url = this.oauth.buildConnectUrl(agencyId, companyId, scopeGroup, returnUrl);
     this.auditLog.record({
       agencyId,
       action: AuditAction.OAUTH_CONNECT,
       entityType: AuditEntityType.INTEGRATION,
-      entityId: clientId,
+      entityId: companyId,
       entityName: 'Meta',
       description: 'Fluxo OAuth Meta iniciado',
-      metadata: { clientId, provider: 'META', scopeGroup, step: 'start' },
+      metadata: { companyId, provider: 'META', scopeGroup, step: 'start' },
     });
     return { url };
   }
@@ -76,7 +76,7 @@ export class MetaOAuthCallbackUseCase {
         agencyId: payload.agencyId,
         action: AuditAction.OAUTH_CONNECT,
         entityType: AuditEntityType.INTEGRATION,
-        entityId: payload.clientId,
+        entityId: payload.companyId,
         entityName: 'Meta',
         description: 'OAuth Meta autorizado — aguardando seleção de conta',
         metadata: { provider: 'META', step: 'authorized', pendingId },
@@ -98,10 +98,10 @@ export class ListMetaAdAccountsUseCase {
     private readonly oauth: MetaOAuthService,
   ) {}
 
-  async execute(agencyId: string, clientId: string, pendingId: string) {
+  async execute(agencyId: string, companyId: string, pendingId: string) {
     const pending = await this.oauth.getPending(pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
-    if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
+    if (pending.agencyId !== agencyId || pending.companyId !== companyId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
     }
     const accounts = await this.oauth.listAdAccounts(pending.longLivedToken);
@@ -119,10 +119,10 @@ export class ListMetaAdAccountsUseCase {
 export class ListMetaPagesUseCase {
   constructor(private readonly oauth: MetaOAuthService) {}
 
-  async execute(agencyId: string, clientId: string, pendingId: string) {
+  async execute(agencyId: string, companyId: string, pendingId: string) {
     const pending = await this.oauth.getPending(pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
-    if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
+    if (pending.agencyId !== agencyId || pending.companyId !== companyId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
     }
     const pages = await this.oauth.listPages(pending.longLivedToken);
@@ -157,10 +157,10 @@ export class FinalizeMetaOAuthUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async execute(agencyId: string, clientId: string, dto: FinalizeMetaDto) {
+  async execute(agencyId: string, companyId: string, dto: FinalizeMetaDto) {
     const pending = await this.oauth.consumePending(dto.pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
-    if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
+    if (pending.agencyId !== agencyId || pending.companyId !== companyId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
     }
 
@@ -201,7 +201,7 @@ export class FinalizeMetaOAuthUseCase {
     const integration = await this.prisma.integration.create({
       data: {
         agencyId,
-        clientId,
+        companyId,
         provider: dto.targetProvider,
         displayName: dto.displayName ?? null,
         credentialsEnc,

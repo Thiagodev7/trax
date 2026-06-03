@@ -51,7 +51,7 @@ export class UpdateReportUseCase {
           createdAt: true,
           updatedAt: true,
           shareToken: true,
-          client: { select: { id: true, name: true, logoUrl: true } },
+          company: { select: { id: true, name: true, logoUrl: true } },
           integrations: {
             select: {
               integration: {

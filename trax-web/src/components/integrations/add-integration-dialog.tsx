@@ -137,11 +137,11 @@ interface FieldDef {
 type ProviderDef = (typeof PROVIDERS)[number]
 
 interface Props {
-  clientId: string
+  companyId: string
   onAdded: (integration: Integration) => void
 }
 
-export function AddIntegrationDialog({ clientId, onAdded }: Props) {
+export function AddIntegrationDialog({ companyId, onAdded }: Props) {
   const [open, setOpen] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<ProviderDef | null>(null)
   const [connectingOAuth, setConnectingOAuth] = useState(false)
@@ -153,7 +153,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
 
   function getReturnUrl() {
     return typeof window !== 'undefined'
-      ? `${window.location.origin}/clients/${clientId}/integrations`
+      ? `${window.location.origin}/companies/${companyId}/integrations`
       : undefined
   }
 
@@ -163,7 +163,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
       const returnUrl = getReturnUrl()
       const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
       const { url } = await api.get<{ url: string }>(
-        `/clients/${clientId}/integrations/google-ads/connect${params}`,
+        `/companies/${companyId}/integrations/google-ads/connect${params}`,
       )
       window.location.href = url
     } catch (err: unknown) {
@@ -179,7 +179,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
       const params = new URLSearchParams({ scopeGroup: 'all' })
       if (returnUrl) params.set('returnUrl', returnUrl)
       const { url } = await api.get<{ url: string }>(
-        `/clients/${clientId}/integrations/meta/connect?${params.toString()}`,
+        `/companies/${companyId}/integrations/meta/connect?${params.toString()}`,
       )
       window.location.href = url
     } catch (err: unknown) {
@@ -194,7 +194,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
       const returnUrl = getReturnUrl()
       const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
       const { url } = await api.get<{ url: string }>(
-        `/clients/${clientId}/integrations/rd-station/connect${params}`,
+        `/companies/${companyId}/integrations/rd-station/connect${params}`,
       )
       window.location.href = url
     } catch (err: unknown) {
@@ -228,7 +228,7 @@ export function AddIntegrationDialog({ clientId, onAdded }: Props) {
       for (const f of selectedProvider.fields) {
         if (fields[f.key]) credentials[f.key] = fields[f.key]
       }
-      const integration = await api.post<Integration>(`/clients/${clientId}/integrations`, {
+      const integration = await api.post<Integration>(`/companies/${companyId}/integrations`, {
         provider: selectedProvider.value,
         displayName: displayName || undefined,
         credentials,

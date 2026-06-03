@@ -12,7 +12,7 @@ export class UpdateNotificationPreferencesDto {
 
   @ApiProperty()
   @IsBoolean()
-  notifyNewClient: boolean;
+  notifyNewCompany: boolean;
 
   @ApiProperty()
   @IsBoolean()

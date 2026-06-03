@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { MetaConfigService } from '@/modules/client/meta-config/meta-config.service';
+import { MetaConfigService } from '@/modules/company/meta-config/meta-config.service';
 import {
   campaignCodeFromName,
   detectProduct,
   detectStates,
 } from '@common/utils/meta-heuristics';
-import { MetaConfigShape, defaultMetaConfig } from '@/modules/client/meta-config/meta-config.template';
+import { MetaConfigShape, defaultMetaConfig } from '@/modules/company/meta-config/meta-config.template';
 
 export interface DailyPoint {
   date: string;
@@ -64,7 +64,7 @@ export class GetMetaAdsMetricsUseCase {
   async execute(query: MetaAdsQuery) {
     const report = await this.prisma.report.findFirst({
       where: { id: query.reportId, agencyId: query.agencyId },
-      include: { integrations: { include: { integration: true } }, client: true },
+      include: { integrations: { include: { integration: true } }, company: true },
     });
     if (!report) throw new NotFoundException('Relatório não encontrado.');
 
@@ -78,7 +78,7 @@ export class GetMetaAdsMetricsUseCase {
 
     let config: MetaConfigShape;
     try {
-      const cfg = await this.metaConfig.getOrCreate(query.agencyId, report.clientId);
+      const cfg = await this.metaConfig.getOrCreate(query.agencyId, report.companyId);
       config = cfg as MetaConfigShape;
     } catch {
       config = defaultMetaConfig();

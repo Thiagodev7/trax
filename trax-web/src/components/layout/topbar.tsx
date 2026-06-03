@@ -33,7 +33,7 @@ const ALL_NAV_ITEMS: Array<{
   roles: NavRole[]
 }> = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'MANAGER', 'VIEWER'] },
-  { href: '/clients', label: 'Clientes', icon: Users, roles: ['ADMIN', 'MANAGER'] },
+  { href: '/companies', label: 'Empresas', icon: Users, roles: ['ADMIN', 'MANAGER'] },
   { href: '/reports', label: 'Relatórios', icon: FileBarChart2, roles: ['ADMIN', 'MANAGER', 'VIEWER'] },
   { href: '/settings', label: 'Configurações', icon: Settings, roles: ['ADMIN'] },
 ]

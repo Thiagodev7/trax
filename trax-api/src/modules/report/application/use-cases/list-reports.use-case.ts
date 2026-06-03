@@ -6,7 +6,7 @@ import { AuthenticatedUser } from '@common/decorators/current-user.decorator';
 interface ListReportsInput {
   agencyId: string;
   user: AuthenticatedUser;
-  clientId?: string;
+  companyId?: string;
   page: number;
   limit: number;
 }
@@ -15,23 +15,23 @@ interface ListReportsInput {
 export class ListReportsUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ agencyId, user, clientId, page, limit }: ListReportsInput) {
+  async execute({ agencyId, user, companyId, page, limit }: ListReportsInput) {
     const take = Math.min(limit, 50);
     const skip = (page - 1) * take;
 
-    // CLIENT_VIEWER: apenas relatórios publicados dos seus clientes
-    const clientFilter =
-      user.role === UserRole.CLIENT_VIEWER
+    // COMPANY_VIEWER: apenas relatórios publicados das suas empresas
+    const companyFilter =
+      user.role === UserRole.COMPANY_VIEWER
         ? {
-            client: { userClients: { some: { userId: user.sub } } },
+            company: { userCompanies: { some: { userId: user.sub } } },
             status: ReportStatus.PUBLISHED,
           }
         : {};
 
     const where = {
       agencyId,
-      ...(clientId ? { clientId } : {}),
-      ...clientFilter,
+      ...(companyId ? { companyId } : {}),
+      ...companyFilter,
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -47,7 +47,7 @@ export class ListReportsUseCase {
           publishedAt: true,
           createdAt: true,
           shareToken: true,
-          client: { select: { id: true, name: true, logoUrl: true } },
+          company: { select: { id: true, name: true, logoUrl: true } },
         },
         orderBy: { createdAt: 'desc' },
         take,

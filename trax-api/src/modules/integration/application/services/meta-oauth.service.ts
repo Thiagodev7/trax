@@ -21,7 +21,7 @@ const OAUTH_URL = 'https://www.facebook.com/v21.0/dialog/oauth';
 
 export interface MetaOAuthState {
   agencyId: string;
-  clientId: string;
+  companyId: string;
   scopes: string[];
   returnUrl?: string;
   nonce: string;
@@ -29,7 +29,7 @@ export interface MetaOAuthState {
 
 export interface MetaPendingOAuth {
   agencyId: string;
-  clientId: string;
+  companyId: string;
   longLivedToken: string;
   scopes: string[];
 }
@@ -122,7 +122,7 @@ export class MetaOAuthService {
    * Gera a URL de autorização para o escopo solicitado.
    * @param scopes 'ads' (Meta Ads) | 'instagram' | 'all' (todos os canais Meta)
    */
-  buildConnectUrl(agencyId: string, clientId: string, scopeGroup: 'ads' | 'instagram' | 'all', returnUrl?: string): string {
+  buildConnectUrl(agencyId: string, companyId: string, scopeGroup: 'ads' | 'instagram' | 'all', returnUrl?: string): string {
     const scopes = scopeGroup === 'ads'
       ? META_ADS_SCOPES
       : scopeGroup === 'instagram'
@@ -130,7 +130,7 @@ export class MetaOAuthService {
         : [...new Set([...META_ADS_SCOPES, ...INSTAGRAM_SCOPES])];
 
     const state = this.signState({
-      agencyId, clientId, scopes,
+      agencyId, companyId, scopes,
       returnUrl: this.validateReturnUrl(returnUrl),
       nonce: randomBytes(16).toString('hex'),
     });
@@ -226,7 +226,7 @@ export class MetaOAuthService {
     }
     const e = memFallback.get(id);
     if (!e || e.expiresAt < Date.now()) { memFallback.delete(id); return null; }
-    return { agencyId: e.agencyId, clientId: e.clientId, longLivedToken: e.longLivedToken, scopes: e.scopes };
+    return { agencyId: e.agencyId, companyId: e.companyId, longLivedToken: e.longLivedToken, scopes: e.scopes };
   }
 
   async consumePending(id: string): Promise<MetaPendingOAuth | null> {
@@ -244,11 +244,11 @@ export class MetaOAuthService {
     const pendingId = this.createPendingId();
     await this.storePending(pendingId, {
       agencyId: payload.agencyId,
-      clientId: payload.clientId,
+      companyId: payload.companyId,
       longLivedToken,
       scopes: payload.scopes,
     });
-    const base = payload.returnUrl ?? `${this.getWebAppUrl()}/clients/${payload.clientId}/integrations`;
+    const base = payload.returnUrl ?? `${this.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
     const sep = base.includes('?') ? '&' : '?';
     return {
       pendingId,

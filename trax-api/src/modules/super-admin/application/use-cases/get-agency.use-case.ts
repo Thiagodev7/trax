@@ -11,7 +11,7 @@ export class GetAgencyUseCase {
       include: {
         _count: {
           select: {
-            clients: true,
+            companies: true,
             users: true,
             reports: true,
           },
@@ -33,7 +33,7 @@ export class GetAgencyUseCase {
           displayName: true,
           lastErrorMsg: true,
           updatedAt: true,
-          client: { select: { id: true, name: true } },
+          company: { select: { id: true, name: true } },
         },
       }),
     ]);

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search, ShieldCheck, User, FileText, Plug, LogIn, LogOut, Edit3,
-  Trash2, Upload, RefreshCw, Filter, Activity,
+  Trash2, Upload, RefreshCw, Filter, Activity, Building2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -56,14 +56,14 @@ const ACTION_COLORS: Record<string, string> = {
 const ENTITY_ICONS: Record<string, React.ElementType> = {
   AUTH: LogIn,
   USER: User,
-  CLIENT: User,
+  COMPANY: Building2,
   REPORT: FileText,
   INTEGRATION: Plug,
   AGENCY: ShieldCheck,
 }
 
 const ACTIONS = ['LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'PUBLISH', 'SYNC', 'INVITE']
-const ENTITY_TYPES = ['AUTH', 'USER', 'CLIENT', 'REPORT', 'INTEGRATION', 'AGENCY']
+const ENTITY_TYPES = ['AUTH', 'USER', 'COMPANY', 'REPORT', 'INTEGRATION', 'AGENCY']
 
 function ActorBadge({ actorType, user }: { actorType: string; user: AuditLog['user'] }) {
   if (actorType === 'SYSTEM') {

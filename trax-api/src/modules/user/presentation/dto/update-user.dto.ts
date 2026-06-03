@@ -17,5 +17,5 @@ export class UpdateUserDto {
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  clientIds?: string[];
+  companyIds?: string[];
 }

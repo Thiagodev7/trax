@@ -1,4 +1,4 @@
-export interface ApiClient {
+export interface ApiCompany {
   id: string;
   agencyId: string;
   name: string;
@@ -11,10 +11,13 @@ export interface ApiClient {
   };
 }
 
+/** @deprecated Use ApiCompany instead */
+export type ApiClient = ApiCompany;
+
 export interface ApiReport {
   id: string;
   agencyId: string;
-  clientId: string;
+  companyId: string;
   title: string;
   description?: string;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
@@ -26,10 +29,12 @@ export interface ApiReport {
   updatedAt: string;
   moduleConfig: Record<string, unknown> | null;
   layoutJson: unknown;
+  company?: { id: string; name: string };
+  /** @deprecated Use company instead */
   client?: { id: string; name: string };
 }
 
-export type ApiUserRole = 'AGENCY_ADMIN' | 'AGENCY_VIEWER' | 'CLIENT_VIEWER';
+export type ApiUserRole = 'AGENCY_ADMIN' | 'AGENCY_VIEWER' | 'COMPANY_VIEWER';
 
 export interface ApiUser {
   id: string;
@@ -40,16 +45,18 @@ export interface ApiUser {
   isActive: boolean;
   lastLoginAt?: string | null;
   createdAt: string;
-  userClients: { client: { id: string; name: string } }[];
+  userCompanies: { company: { id: string; name: string } }[];
+  /** @deprecated Use userCompanies */
+  userClients?: { client: { id: string; name: string } }[];
 }
 
 export interface AgencyPlanInfo {
   plan: string;
   trialEndsAt?: string | null;
-  maxClients: number;
+  maxCompanies: number;
   maxUsers: number;
   usage: {
-    clients: number;
+    companies: number;
     users: number;
     integrations: number;
   };

@@ -48,7 +48,7 @@ interface Report {
   shareToken: string | null
   moduleConfig: ModuleConfig | null
   layoutJson: unknown
-  client: {
+  company: {
     id: string
     name: string
     logoUrl: string | null
@@ -103,7 +103,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
   async function handlePublish() {
     try {
       await api.patch<unknown>(`/reports/${report.id}/publish`, {})
-      toast.success('Relatório publicado! Compartilhe o link com seu cliente.')
+      toast.success('Relatório publicado! Compartilhe o link com a empresa.')
       startTransition(() => router.refresh())
     } catch (error: any) {
       toast.error(error.message || 'Erro ao publicar relatório')
@@ -132,9 +132,9 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              {isPublic && report.client.logoUrl && (
+              {isPublic && report.company.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={report.client.logoUrl} alt={report.client.name} className="h-10 w-auto rounded border border-[var(--color-border)] mb-3" />
+                <img src={report.company.logoUrl} alt={report.company.name} className="h-10 w-auto rounded border border-[var(--color-border)] mb-3" />
               )}
               <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight leading-tight">
                 {report.title}
@@ -142,7 +142,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <div className="flex items-center gap-1.5 text-sm text-[var(--color-muted-foreground)]">
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>{report.client.name}</span>
+                  <span>{report.company.name}</span>
                 </div>
                 {report.periodStart && report.periodEnd && (
                   <div className="flex items-center gap-1.5 text-sm text-[var(--color-muted-foreground)]">
@@ -283,7 +283,7 @@ export function ReportViewer({ report, shareToken }: { report: Report; shareToke
                 periodEnd={periodEnd}
                 selectedDate={selectedDate}
                 onSelectDate={(d) => { setSelectedDate(d); if (d) setActiveTab('ORGANIC') }}
-                clientId={isPublic ? undefined : report.client.id}
+                companyId={isPublic ? undefined : report.company.id}
                 shareToken={shareToken}
               />
             )}

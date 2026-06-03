@@ -15,13 +15,13 @@ export class UpdateUserUseCase {
     const user = await this.prisma.user.findFirst({ where: { id: userId, agencyId } });
     if (!user) throw new NotFoundException('Usuário não encontrado.');
 
-    if (dto.role === UserRole.CLIENT_VIEWER && dto.clientIds !== undefined) {
-      if (dto.clientIds.length === 0) {
-        throw new BadRequestException('CLIENT_VIEWER precisa ter ao menos um cliente.');
+    if (dto.role === UserRole.COMPANY_VIEWER && dto.companyIds !== undefined) {
+      if (dto.companyIds.length === 0) {
+        throw new BadRequestException('COMPANY_VIEWER precisa ter ao menos uma empresa.');
       }
-      await this.prisma.userClient.deleteMany({ where: { userId } });
-      await this.prisma.userClient.createMany({
-        data: dto.clientIds.map((clientId) => ({ userId, clientId, agencyId })),
+      await this.prisma.userCompany.deleteMany({ where: { userId } });
+      await this.prisma.userCompany.createMany({
+        data: dto.companyIds.map((companyId) => ({ userId, companyId, agencyId })),
         skipDuplicates: true,
       });
     }

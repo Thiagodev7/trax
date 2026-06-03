@@ -62,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: me.role,
             agencyId: me.agencyId,
             agency: me.agency,
-            clients: me.clients,
+            companies: me.companies,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
             expiresIn,
@@ -110,7 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: me.role,
             agencyId: me.agencyId,
             agency: me.agency,
-            clients: me.clients,
+            companies: me.companies,
             accessToken,
             refreshToken,
             expiresIn,
@@ -178,7 +178,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: u.role,
           agencyId: u.agencyId,
           agency: u.agency,
-          clients: u.clients,
+          companies: u.companies,
           accessToken: u.accessToken,
           refreshToken: u.refreshToken,
           accessTokenExpires: Date.now() + expiresIn * 1000,
@@ -203,7 +203,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       u.role = token.role as string
       u.agencyId = token.agencyId as string
       u.agency = token.agency as unknown
-      u.clients = token.clients as unknown
+      u.companies = token.companies as unknown
       u.isSuperAdmin = token.isSuperAdmin as boolean
       ;(session as { accessToken?: string; error?: string }).accessToken =
         token.accessToken as string

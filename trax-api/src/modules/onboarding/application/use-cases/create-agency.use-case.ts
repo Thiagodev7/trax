@@ -58,7 +58,7 @@ export class CreateAgencyUseCase {
           slug,
           plan: 'TRIAL',
           trialEndsAt,
-          maxClients: 2,
+          maxCompanies: 2,
           maxUsers: 1,
           primaryColor: dto.primaryColor ?? '#6366F1',
           themeMode: dto.themeMode ?? 'dark',

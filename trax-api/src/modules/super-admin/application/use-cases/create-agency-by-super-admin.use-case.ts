@@ -9,12 +9,12 @@ import { CreateAgencyBySuperAdminDto } from '../../presentation/dto/create-agenc
 
 const RESERVED_SLUGS = ['www', 'api', 'admin', 'app', 'static', 'assets', 'trax', 'landing'];
 
-const PLAN_DEFAULTS: Record<AgencyPlan, { maxClients: number; maxUsers: number }> = {
-  TRIAL: { maxClients: 2, maxUsers: 1 },
-  STARTER: { maxClients: 5, maxUsers: 3 },
-  PRO: { maxClients: 15, maxUsers: 10 },
-  AGENCY: { maxClients: 50, maxUsers: 25 },
-  ENTERPRISE: { maxClients: 999, maxUsers: 100 },
+const PLAN_DEFAULTS: Record<AgencyPlan, { maxCompanies: number; maxUsers: number }> = {
+  TRIAL: { maxCompanies: 2, maxUsers: 1 },
+  STARTER: { maxCompanies: 5, maxUsers: 3 },
+  PRO: { maxCompanies: 15, maxUsers: 10 },
+  AGENCY: { maxCompanies: 50, maxUsers: 25 },
+  ENTERPRISE: { maxCompanies: 999, maxUsers: 100 },
 };
 
 @Injectable()
@@ -40,7 +40,7 @@ export class CreateAgencyBySuperAdminUseCase {
 
     const plan = dto.plan ?? AgencyPlan.TRIAL;
     const defaults = PLAN_DEFAULTS[plan];
-    const maxClients = dto.maxClients ?? defaults.maxClients;
+    const maxCompanies = dto.maxCompanies ?? defaults.maxCompanies;
     const maxUsers = dto.maxUsers ?? defaults.maxUsers;
     const isActive = dto.isActive ?? true;
 
@@ -61,7 +61,7 @@ export class CreateAgencyBySuperAdminUseCase {
           slug,
           plan,
           trialEndsAt,
-          maxClients,
+          maxCompanies,
           maxUsers,
           isActive,
         },

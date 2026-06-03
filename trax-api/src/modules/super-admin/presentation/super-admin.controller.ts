@@ -43,12 +43,13 @@ import {
 import { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto';
 import { ListAuditLogsUseCase } from '@modules/audit-log/application/use-cases/list-audit-logs.use-case';
 import {
-  ListAgencyClientsUseCase,
+  ListAgencyCompaniesUseCase,
   ListAgencyIntegrationsUseCase,
 } from '../application/use-cases/list-agency-resources.use-case';
 
 @ApiTags('Super Admin')
 @Controller('super-admin')
+@UseGuards(SuperAdminGuard)
 export class SuperAdminController {
   constructor(
     private readonly loginUseCase: SuperAdminLoginUseCase,
@@ -63,7 +64,7 @@ export class SuperAdminController {
     private readonly getHealthUseCase: GetHealthUseCase,
     private readonly getSuperAdminMeUseCase: GetSuperAdminMeUseCase,
     private readonly updateSuperAdminPasswordUseCase: UpdateSuperAdminPasswordUseCase,
-    private readonly listAgencyClientsUseCase: ListAgencyClientsUseCase,
+    private readonly listAgencyCompaniesUseCase: ListAgencyCompaniesUseCase,
     private readonly listAgencyIntegrationsUseCase: ListAgencyIntegrationsUseCase,
     private readonly listAuditLogsUseCase: ListAuditLogsUseCase,
   ) {}
@@ -179,11 +180,11 @@ export class SuperAdminController {
   }
 
   @UseGuards(SuperAdminGuard)
-  @Get('agencies/:id/clients')
+  @Get('agencies/:id/companies')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Clientes de uma agência' })
-  async agencyClients(@Param('id', ParseUUIDPipe) id: string) {
-    return this.listAgencyClientsUseCase.execute(id);
+  @ApiOperation({ summary: 'Empresas de uma agência' })
+  async agencyCompanies(@Param('id', ParseUUIDPipe) id: string) {
+    return this.listAgencyCompaniesUseCase.execute(id);
   }
 
   @UseGuards(SuperAdminGuard)

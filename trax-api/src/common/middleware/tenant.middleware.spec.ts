@@ -1,11 +1,13 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { TenantMiddleware, clearTenantCache } from './tenant.middleware';
 import { PrismaService } from '@/prisma/prisma.service';
+import { RedisService } from '@/redis/redis.service';
 import * as tenantContext from '@common/context/tenant.context';
 
 describe('TenantMiddleware', () => {
   let middleware: TenantMiddleware;
   let prismaService: jest.Mocked<PrismaService>;
+  let redisService: jest.Mocked<RedisService>;
 
   beforeEach(() => {
     process.env.TRAX_BASE_DOMAIN = 'traxsolucoes.com.br';
@@ -14,7 +16,14 @@ describe('TenantMiddleware', () => {
         findFirst: jest.fn(),
       },
     } as any;
-    middleware = new TenantMiddleware(prismaService);
+    redisService = {
+      isConnected: false,
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      delPattern: jest.fn(),
+    } as any;
+    middleware = new TenantMiddleware(prismaService, redisService);
     clearTenantCache();
   });
 

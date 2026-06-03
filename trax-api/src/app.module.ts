@@ -8,7 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AgencyModule } from './modules/agency/agency.module';
-import { ClientModule } from './modules/client/client.module';
+import { CompanyModule } from './modules/company/company.module';
 import { ReportModule } from './modules/report/report.module';
 import { IntegrationModule } from './modules/integration/integration.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
@@ -20,7 +20,7 @@ import { UserModule } from './modules/user/user.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
-import { MetaConfigModule } from './modules/client/meta-config/meta-config.module';
+import { MetaConfigModule } from './modules/company/meta-config/meta-config.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuditContextInterceptor } from '@common/interceptors/audit-context.interceptor';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -64,7 +64,7 @@ import { RedisModule } from './redis/redis.module';
     TenantModule,
     AuthModule,
     AgencyModule,
-    ClientModule,
+    CompanyModule,
     ReportModule,
     IntegrationModule,
     MetricsModule,

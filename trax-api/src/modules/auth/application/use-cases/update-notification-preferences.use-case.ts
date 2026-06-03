@@ -21,13 +21,13 @@ export class UpdateNotificationPreferencesUseCase {
       data: {
         notifyReportPublished: dto.notifyReportPublished,
         notifyIntegrationErrors: dto.notifyIntegrationErrors,
-        notifyNewClient: dto.notifyNewClient,
+        notifyNewCompany: dto.notifyNewCompany,
         notifyWeeklySummary: dto.notifyWeeklySummary,
       },
       select: {
         notifyReportPublished: true,
         notifyIntegrationErrors: true,
-        notifyNewClient: true,
+        notifyNewCompany: true,
         notifyWeeklySummary: true,
       },
     });
@@ -35,7 +35,7 @@ export class UpdateNotificationPreferencesUseCase {
     return {
       notifyReportPublished: updated.notifyReportPublished,
       notifyIntegrationErrors: updated.notifyIntegrationErrors,
-      notifyNewClient: updated.notifyNewClient,
+      notifyNewCompany: updated.notifyNewCompany,
       notifyWeeklySummary: updated.notifyWeeklySummary,
     };
   }

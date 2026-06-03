@@ -24,7 +24,7 @@ export class PublishReportUseCase {
         status: true,
         periodStart: true,
         periodEnd: true,
-        client: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true } },
         agency: { select: { name: true, slug: true } },
         integrations: { select: { integrationId: true } },
       },
@@ -66,8 +66,8 @@ export class PublishReportUseCase {
     });
 
     // Fire-and-forget: notificações de email e análise IA
-    this.notifyUsers(agencyId, report.agency, report.client.name, published.title, published.shareToken!);
-    this.generateAiAnalysis(reportId, report.title, report.client.name, report.periodStart, report.periodEnd, report.integrations.map(i => i.integrationId));
+    this.notifyUsers(agencyId, report.agency, report.company.name, published.title, published.shareToken!);
+    this.generateAiAnalysis(reportId, report.title, report.company.name, report.periodStart, report.periodEnd, report.integrations.map(i => i.integrationId));
 
     return published;
   }

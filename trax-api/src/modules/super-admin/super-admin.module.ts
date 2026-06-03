@@ -15,7 +15,7 @@ import {
   UpdateSuperAdminPasswordUseCase,
 } from './application/use-cases/super-admin-profile.use-case';
 import {
-  ListAgencyClientsUseCase,
+  ListAgencyCompaniesUseCase,
   ListAgencyIntegrationsUseCase,
 } from './application/use-cases/list-agency-resources.use-case';
 import { AuthModule } from '@modules/auth/auth.module';
@@ -37,7 +37,7 @@ import { EmailModule } from '@modules/email/email.module';
     GetHealthUseCase,
     GetSuperAdminMeUseCase,
     UpdateSuperAdminPasswordUseCase,
-    ListAgencyClientsUseCase,
+    ListAgencyCompaniesUseCase,
     ListAgencyIntegrationsUseCase,
   ],
 })

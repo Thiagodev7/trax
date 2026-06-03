@@ -20,28 +20,28 @@ import type { ApiUser, ApiUserRole, AgencyPlanInfo } from '@/types/api'
 
 type UserRole = ApiUserRole
 
-interface Client {
+interface Company {
   id: string
   name: string
 }
 
 interface UsersTableProps {
   users: ApiUser[]
-  clients: Client[]
+  companies: Company[]
   plan: AgencyPlanInfo | null
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: typeof Shield; color: string; bg: string }> = {
   AGENCY_ADMIN: { label: 'Admin', icon: Shield, color: 'text-violet-400', bg: 'bg-violet-500/10' },
   AGENCY_VIEWER: { label: 'Visualizador', icon: Eye, color: 'text-sky-400', bg: 'bg-sky-500/10' },
-  CLIENT_VIEWER: { label: 'Cliente', icon: Building2, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  COMPANY_VIEWER: { label: 'Empresa', icon: Building2, color: 'text-amber-400', bg: 'bg-amber-500/10' },
 }
 
 const inviteSchema = z.object({
   name: z.string().min(2, 'Nome muito curto'),
   email: z.string().email('Email inválido'),
-  role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'CLIENT_VIEWER']),
-  clientIds: z.array(z.string()).optional(),
+  role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'COMPANY_VIEWER']),
+  companyIds: z.array(z.string()).optional(),
 })
 type InviteForm = z.infer<typeof inviteSchema>
 
@@ -71,12 +71,12 @@ function UserAvatar({ user }: { user: ApiUser }) {
   )
 }
 
-function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => void }) {
+function InviteModal({ companies, onClose }: { companies: Company[]; onClose: () => void }) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [tempCredentials, setTempCredentials] = useState<{ email: string; password: string } | null>(null)
-  const [selectedClients, setSelectedClients] = useState<string[]>([])
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<InviteForm>({
     resolver: zodResolver(inviteSchema),
@@ -90,7 +90,7 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
     try {
       const result = await api.post('/users/invite', {
         ...data,
-        clientIds: role === 'CLIENT_VIEWER' ? selectedClients : undefined,
+        companyIds: role === 'COMPANY_VIEWER' ? selectedCompanies : undefined,
       }) as { email: string; tempPassword: string }
       setTempCredentials({ email: result.email, password: result.tempPassword })
       startTransition(() => router.refresh())
@@ -188,24 +188,24 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
         {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
       </div>
 
-      {/* Clients for CLIENT_VIEWER */}
-      {role === 'CLIENT_VIEWER' && (
+      {/* Companies for COMPANY_VIEWER */}
+      {role === 'COMPANY_VIEWER' && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-2"
         >
           <label className="text-sm font-medium text-[var(--color-foreground)]">
-            Clientes visíveis <span className="text-red-400">*</span>
+            Empresas visíveis <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
-            {clients.map((c) => (
+            {companies.map((c) => (
               <label key={c.id} className="cursor-pointer flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
                 <input
                   type="checkbox"
                   className="w-4 h-4 accent-[var(--color-primary)]"
-                  checked={selectedClients.includes(c.id)}
-                  onChange={(e) => setSelectedClients(prev =>
+                  checked={selectedCompanies.includes(c.id)}
+                  onChange={(e) => setSelectedCompanies(prev =>
                     e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
                   )}
                 />
@@ -213,8 +213,8 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
               </label>
             ))}
           </div>
-          {selectedClients.length === 0 && (
-            <p className="text-xs text-amber-400">Selecione ao menos um cliente.</p>
+          {selectedCompanies.length === 0 && (
+            <p className="text-xs text-amber-400">Selecione ao menos uma empresa.</p>
           )}
         </motion.div>
       )}
@@ -234,22 +234,22 @@ function InviteModal({ clients, onClose }: { clients: Client[]; onClose: () => v
 // ─── Edit Role Modal ──────────────────────────────────────────────────────────
 function EditRoleModal({
   user,
-  clients,
+  companies,
   onClose,
 }: {
   user: ApiUser
-  clients: Client[]
+  companies: Company[]
   onClose: () => void
 }) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [selectedClients, setSelectedClients] = useState<string[]>(
-    user.userClients.map(uc => uc.client.id),
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>(
+    user.userCompanies.map(uc => uc.company.id),
   )
 
   const schema = z.object({
-    role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'CLIENT_VIEWER']),
+    role: z.enum(['AGENCY_ADMIN', 'AGENCY_VIEWER', 'COMPANY_VIEWER']),
   })
   type FormData = z.infer<typeof schema>
 
@@ -264,7 +264,7 @@ function EditRoleModal({
     try {
       await api.patch(`/users/${user.id}`, {
         role: data.role,
-        clientIds: data.role === 'CLIENT_VIEWER' ? selectedClients : undefined,
+        companyIds: data.role === 'COMPANY_VIEWER' ? selectedCompanies : undefined,
       })
       toast.success('Cargo atualizado.')
       startTransition(() => router.refresh())
@@ -298,19 +298,19 @@ function EditRoleModal({
         </div>
       </div>
 
-      {role === 'CLIENT_VIEWER' && (
+      {role === 'COMPANY_VIEWER' && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
           <label className="text-sm font-medium text-[var(--color-foreground)]">
-            Clientes visíveis <span className="text-red-400">*</span>
+            Empresas visíveis <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-            {clients.map((c) => (
+            {companies.map((c) => (
               <label key={c.id} className="cursor-pointer flex items-center gap-2 p-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-primary)]/40 transition-colors">
                 <input
                   type="checkbox"
                   className="w-4 h-4 accent-[var(--color-primary)]"
-                  checked={selectedClients.includes(c.id)}
-                  onChange={(e) => setSelectedClients(prev =>
+                  checked={selectedCompanies.includes(c.id)}
+                  onChange={(e) => setSelectedCompanies(prev =>
                     e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
                   )}
                 />
@@ -338,7 +338,7 @@ function EditRoleModal({
   )
 }
 
-export function UsersTable({ users: initialUsers, clients, plan }: UsersTableProps) {
+export function UsersTable({ users: initialUsers, companies, plan }: UsersTableProps) {
   const api = useApiClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -415,14 +415,14 @@ export function UsersTable({ users: initialUsers, clients, plan }: UsersTablePro
                     Convidar Usuário
                   </Dialog.Title>
                   <Dialog.Description className="text-sm text-[var(--color-muted-foreground)]">
-                    Crie um acesso para sua equipe ou clientes.
+                    Crie um acesso para sua equipe ou empresas.
                   </Dialog.Description>
                 </div>
                 <Dialog.Close className="p-1.5 rounded-lg hover:bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
                   <X className="w-4 h-4" />
                 </Dialog.Close>
               </div>
-              <InviteModal clients={clients} onClose={() => setInviteOpen(false)} />
+              <InviteModal companies={companies} onClose={() => setInviteOpen(false)} />
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
@@ -447,7 +447,7 @@ export function UsersTable({ users: initialUsers, clients, plan }: UsersTablePro
               </Dialog.Close>
             </div>
             {editRoleUser && (
-              <EditRoleModal user={editRoleUser} clients={clients} onClose={() => setEditRoleUser(null)} />
+              <EditRoleModal user={editRoleUser} companies={companies} onClose={() => setEditRoleUser(null)} />
             )}
           </Dialog.Content>
         </Dialog.Portal>
@@ -495,7 +495,7 @@ export function UsersTable({ users: initialUsers, clients, plan }: UsersTablePro
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  {['Usuário', 'Função', 'Clientes', 'Status', 'Último acesso', ''].map((h) => (
+                  {['Usuário', 'Função', 'Empresas', 'Status', 'Último acesso', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
                       {h}
                     </th>
@@ -528,16 +528,16 @@ export function UsersTable({ users: initialUsers, clients, plan }: UsersTablePro
                         <RoleBadge role={user.role} />
                       </td>
                       <td className="px-4 py-3">
-                        {user.userClients.length > 0 ? (
+                        {user.userCompanies.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {user.userClients.slice(0, 2).map(uc => (
-                              <span key={uc.client.id} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]">
-                                {uc.client.name}
+                            {user.userCompanies.slice(0, 2).map(uc => (
+                              <span key={uc.company.id} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]">
+                                {uc.company.name}
                               </span>
                             ))}
-                            {user.userClients.length > 2 && (
+                            {user.userCompanies.length > 2 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)]">
-                                +{user.userClients.length - 2}
+                                +{user.userCompanies.length - 2}
                               </span>
                             )}
                           </div>

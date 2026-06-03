@@ -14,16 +14,16 @@ export class ConnectRdStationUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  execute(agencyId: string, clientId: string, returnUrl?: string): { url: string } {
-    const url = this.oauth.buildConnectUrl(agencyId, clientId, returnUrl);
+  execute(agencyId: string, companyId: string, returnUrl?: string): { url: string } {
+    const url = this.oauth.buildConnectUrl(agencyId, companyId, returnUrl);
     this.auditLog.record({
       agencyId,
       action: AuditAction.OAUTH_CONNECT,
       entityType: AuditEntityType.INTEGRATION,
-      entityId: clientId,
+      entityId: companyId,
       entityName: 'RD Station',
       description: 'Fluxo OAuth RD Station iniciado',
-      metadata: { clientId, provider: 'RD_STATION', step: 'start' },
+      metadata: { companyId, provider: 'RD_STATION', step: 'start' },
     });
     return { url };
   }
@@ -65,7 +65,7 @@ export class RdStationCallbackUseCase {
         agencyId: payload.agencyId,
         action: AuditAction.OAUTH_CONNECT,
         entityType: AuditEntityType.INTEGRATION,
-        entityId: payload.clientId,
+        entityId: payload.companyId,
         entityName: 'RD Station',
         description: 'OAuth RD Station autorizado',
         metadata: { provider: 'RD_STATION', step: 'authorized', pendingId },
@@ -91,10 +91,10 @@ export class FinalizeRdStationUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async execute(agencyId: string, clientId: string, pendingId: string, displayName?: string) {
+  async execute(agencyId: string, companyId: string, pendingId: string, displayName?: string) {
     const pending = await this.oauth.consumePending(pendingId);
     if (!pending) throw new BadRequestException('Sessão OAuth expirada. Conecte novamente.');
-    if (pending.agencyId !== agencyId || pending.clientId !== clientId) {
+    if (pending.agencyId !== agencyId || pending.companyId !== companyId) {
       throw new ForbiddenException('Sessão OAuth não pertence a este cliente.');
     }
 
@@ -108,7 +108,7 @@ export class FinalizeRdStationUseCase {
     const integration = await this.prisma.integration.create({
       data: {
         agencyId,
-        clientId,
+        companyId,
         provider: 'RD_STATION',
         displayName: displayName ?? null,
         credentialsEnc,

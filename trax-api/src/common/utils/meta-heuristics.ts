@@ -9,7 +9,7 @@ import {
   MetaConfigProduct,
   MetaConfigState,
   MetaConfigThresholds,
-} from '@/modules/client/meta-config/meta-config.template';
+} from '@/modules/company/meta-config/meta-config.template';
 
 export type ProductTag = string | null;
 

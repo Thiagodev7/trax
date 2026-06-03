@@ -5,14 +5,14 @@ import { RedisService } from '@/redis/redis.service';
 
 export interface OAuthStatePayload {
   agencyId: string;
-  clientId: string;
+  companyId: string;
   returnUrl?: string;
   nonce: string;
 }
 
 export interface PendingOAuth {
   agencyId: string;
-  clientId: string;
+  companyId: string;
   refreshToken: string;
 }
 
@@ -94,14 +94,14 @@ export class GoogleAdsOAuthService {
     }
   }
 
-  buildConnectUrl(agencyId: string, clientId: string, returnUrl?: string): string {
+  buildConnectUrl(agencyId: string, companyId: string, returnUrl?: string): string {
     if (!process.env.GOOGLE_ADS_CLIENT_ID || !process.env.GOOGLE_ADS_CLIENT_SECRET) {
       throw new BadRequestException('Google Ads OAuth não configurado no servidor (CLIENT_ID/SECRET).');
     }
     const safeReturnUrl = this.validateReturnUrl(returnUrl);
     const state = this.signState({
       agencyId,
-      clientId,
+      companyId,
       returnUrl: safeReturnUrl,
       nonce: randomBytes(16).toString('hex'),
     });
@@ -142,7 +142,7 @@ export class GoogleAdsOAuthService {
       memoryFallback.delete(pendingId);
       return null;
     }
-    return { agencyId: entry.agencyId, clientId: entry.clientId, refreshToken: entry.refreshToken };
+    return { agencyId: entry.agencyId, companyId: entry.companyId, refreshToken: entry.refreshToken };
   }
 
   /** Lê e deleta a sessão (uso único) */
@@ -164,11 +164,11 @@ export class GoogleAdsOAuthService {
     const pendingId = this.createPendingId();
     await this.storePending(pendingId, {
       agencyId: payload.agencyId,
-      clientId: payload.clientId,
+      companyId: payload.companyId,
       refreshToken,
     });
 
-    const safePath = payload.returnUrl ?? `${this.getWebAppUrl()}/clients/${payload.clientId}/integrations`;
+    const safePath = payload.returnUrl ?? `${this.getWebAppUrl()}/companies/${payload.companyId}/integrations`;
     const sep = safePath.includes('?') ? '&' : '?';
     const redirectUrl = `${safePath}${sep}google_oauth=pending&pendingId=${pendingId}`;
     return { redirectUrl };

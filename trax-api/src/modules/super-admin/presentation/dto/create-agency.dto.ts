@@ -56,7 +56,7 @@ export class CreateAgencyBySuperAdminDto {
   @IsInt()
   @Min(0)
   @IsOptional()
-  maxClients?: number;
+  maxCompanies?: number;
 
   @ApiPropertyOptional()
   @IsInt()

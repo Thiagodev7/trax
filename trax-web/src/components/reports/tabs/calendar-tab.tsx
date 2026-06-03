@@ -33,7 +33,7 @@ interface Props {
   periodEnd?: string
   selectedDate?: string | null
   onSelectDate?: (date: string | null) => void
-  clientId?: string
+  companyId?: string
   shareToken?: string
 }
 
@@ -48,7 +48,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   facebook: 'bg-blue-500/20 border-blue-500/40 text-blue-400',
 }
 
-export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, clientId, shareToken }: Props) {
+export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, onSelectDate, companyId, shareToken }: Props) {
   const authApi = useApiClient()
   const sharedApi = useSharedApiClient()
   const api = shareToken ? sharedApi : authApi
@@ -238,7 +238,7 @@ export function CalendarTab({ reportId, periodStart, periodEnd, selectedDate, on
             </div>
           )}
         </div>
-        {clientId && <SchedulePostsPanel clientId={clientId} />}
+        {companyId && <SchedulePostsPanel companyId={companyId} />}
       </div>
 
       {/* Post detail modal */}

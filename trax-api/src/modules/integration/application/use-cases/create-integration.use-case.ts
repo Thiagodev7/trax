@@ -12,9 +12,9 @@ export class CreateIntegrationUseCase {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async execute(agencyId: string, clientId: string, dto: CreateIntegrationDto) {
-    await this.prisma.client.findFirstOrThrow({
-      where: { id: clientId, agencyId },
+  async execute(agencyId: string, companyId: string, dto: CreateIntegrationDto) {
+    await this.prisma.company.findFirstOrThrow({
+      where: { id: companyId, agencyId },
     });
 
     const credentialsEnc = encryptCredentials(dto.credentials);
@@ -23,7 +23,7 @@ export class CreateIntegrationUseCase {
       const integration = await this.prisma.integration.create({
         data: {
           agencyId,
-          clientId,
+          companyId,
           provider: dto.provider,
           displayName: dto.displayName,
           credentialsEnc,
@@ -52,7 +52,7 @@ export class CreateIntegrationUseCase {
         entityId: integration.id,
         entityName: integration.displayName ?? integration.provider,
         description: `Integração ${integration.provider} criada`,
-        metadata: { clientId, provider: integration.provider },
+        metadata: { companyId, provider: integration.provider },
       });
 
       return integration;

@@ -27,9 +27,9 @@ export class InviteUserUseCase {
       throw new ConflictException('Este email já está cadastrado nesta agência.');
     }
 
-    // CLIENT_VIEWER precisa de pelo menos um cliente
-    if (dto.role === UserRole.CLIENT_VIEWER && (!dto.clientIds || dto.clientIds.length === 0)) {
-      throw new BadRequestException('CLIENT_VIEWER precisa ter ao menos um cliente associado.');
+    // COMPANY_VIEWER precisa de pelo menos uma empresa
+    if (dto.role === UserRole.COMPANY_VIEWER && (!dto.companyIds || dto.companyIds.length === 0)) {
+      throw new BadRequestException('COMPANY_VIEWER precisa ter ao menos uma empresa associada.');
     }
 
     // Verificar limite de usuários do plano
@@ -61,12 +61,12 @@ export class InviteUserUseCase {
       },
     });
 
-    // Vincular clientes ao CLIENT_VIEWER
-    if (dto.role === UserRole.CLIENT_VIEWER && dto.clientIds?.length) {
-      await this.prisma.userClient.createMany({
-        data: dto.clientIds.map((clientId) => ({
+    // Vincular empresas ao COMPANY_VIEWER
+    if (dto.role === UserRole.COMPANY_VIEWER && dto.companyIds?.length) {
+      await this.prisma.userCompany.createMany({
+        data: dto.companyIds.map((companyId) => ({
           userId: user.id,
-          clientId,
+          companyId,
           agencyId,
         })),
         skipDuplicates: true,

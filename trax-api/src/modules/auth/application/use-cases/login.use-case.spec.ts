@@ -105,7 +105,7 @@ describe('LoginUseCase', () => {
 
     expect(result).toHaveProperty('accessToken', 'mock-jwt-token');
     expect(result).toHaveProperty('refreshToken');
-    expect(result.refreshToken).toBeDefined();
+    expect((result as any).refreshToken).toBeDefined();
 
     expect(prismaService.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },

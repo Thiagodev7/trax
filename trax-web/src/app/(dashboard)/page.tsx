@@ -6,7 +6,7 @@ import { apiRequest } from '@/lib/api-client'
 import { headers } from 'next/headers'
 import { subMonths, format, isSameMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ApiClient, ApiReport, PaginatedResponse } from '@/types/api'
+import { ApiCompany, ApiReport, PaginatedResponse } from '@/types/api'
 
 export const metadata = {
   title: 'Dashboard',
@@ -47,14 +47,14 @@ function formatCurrency(value: number): string {
 export default async function DashboardPage() {
   const host = (await headers()).get('host') ?? ''
 
-  const [clientsRes, reportsRes, metricsRes] = await Promise.allSettled([
-    apiRequest<PaginatedResponse<ApiClient> | ApiClient[]>('/clients?limit=100', { domain: host }),
+  const [companiesRes, reportsRes, metricsRes] = await Promise.allSettled([
+    apiRequest<PaginatedResponse<ApiCompany> | ApiCompany[]>('/companies?limit=100', { domain: host }),
     apiRequest<PaginatedResponse<ApiReport> | ApiReport[]>('/reports?limit=100', { domain: host }),
     apiRequest<MetricsSummary>('/metrics/summary', { domain: host }),
   ])
 
-  const clients: ApiClient[] = clientsRes.status === 'fulfilled'
-    ? Array.isArray(clientsRes.value) ? clientsRes.value : (clientsRes.value?.data ?? [])
+  const companies: ApiCompany[] = companiesRes.status === 'fulfilled'
+    ? Array.isArray(companiesRes.value) ? companiesRes.value : (companiesRes.value?.data ?? [])
     : []
 
   const reports: ApiReport[] = reportsRes.status === 'fulfilled'
@@ -65,8 +65,8 @@ export default async function DashboardPage() {
     ? metricsRes.value
     : null
 
-  const totalClients = clients.length
-  const activeClients = clients.filter((c) => c.isActive).length
+  const totalCompanies = companies.length
+  const activeCompanies = companies.filter((c) => c.isActive).length
   const totalReports = reports.length
   const publishedReports = reports.filter((r) => r.status === 'PUBLISHED').length
   const publishRate = totalReports > 0 ? Math.round((publishedReports / totalReports) * 100) : 0
@@ -86,16 +86,16 @@ export default async function DashboardPage() {
       chartData.push({
         mes: label,
         Relatórios: evolutionPoint.leads,
-        Clientes: Math.round(evolutionPoint.spend / 1000),
+        Empresas: Math.round(evolutionPoint.spend / 1000),
       })
     } else {
-      const clientsInMonth = clients.filter((c) => isSameMonth(new Date(c.createdAt), targetMonth)).length
+      const companiesInMonth = companies.filter((c) => isSameMonth(new Date(c.createdAt), targetMonth)).length
       const reportsInMonth = reports.filter((r) => isSameMonth(new Date(r.createdAt), targetMonth)).length
-      chartData.push({ mes: label, Relatórios: reportsInMonth, Clientes: clientsInMonth })
+      chartData.push({ mes: label, Relatórios: reportsInMonth, Empresas: companiesInMonth })
     }
   }
 
-  const barData = [...clients]
+  const barData = [...companies]
     .sort((a, b) => (b._count?.reports ?? 0) - (a._count?.reports ?? 0))
     .slice(0, 5)
     .map((c) => ({
@@ -104,13 +104,13 @@ export default async function DashboardPage() {
     }))
 
   const activities = [
-    ...clients.map((c) => ({
-      id: `client-${c.id}`,
-      type: 'CLIENT' as const,
-      title: 'Novo cliente cadastrado',
+    ...companies.map((c) => ({
+      id: `company-${c.id}`,
+      type: 'COMPANY' as const,
+      title: 'Nova empresa cadastrada',
       subtitle: c.name,
       date: new Date(c.createdAt),
-      link: `/clients/${c.id}`,
+      link: `/companies/${c.id}`,
       status: c.isActive ? 'Ativo' : 'Inativo',
     })),
     ...reports.map((r) => ({
@@ -144,10 +144,10 @@ export default async function DashboardPage() {
       {/* Operational KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard
-          title="Total de Clientes"
-          value={totalClients}
+          title="Total de Empresas"
+          value={totalCompanies}
           icon={<Users className="w-5 h-5" />}
-          subtitle={activeClients > 0 ? `${activeClients} ativo(s)` : 'Nenhum cliente ainda'}
+          subtitle={activeCompanies > 0 ? `${activeCompanies} ativa(s)` : 'Nenhuma empresa ainda'}
           delay={0.1}
         />
         <KpiCard
@@ -158,10 +158,10 @@ export default async function DashboardPage() {
           delay={0.2}
         />
         <KpiCard
-          title="Clientes Ativos"
-          value={activeClients}
+          title="Empresas Ativas"
+          value={activeCompanies}
           icon={<CheckCircle2 className="w-5 h-5" />}
-          subtitle={totalClients > 0 ? `${totalClients} total` : 'Nenhum cliente ainda'}
+          subtitle={totalCompanies > 0 ? `${totalCompanies} total` : 'Nenhuma empresa ainda'}
           delay={0.3}
         />
         <KpiCard
@@ -229,14 +229,14 @@ export default async function DashboardPage() {
               Conecte integrações para ver métricas de mídia
             </p>
             <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-              Vincule Meta Ads, Google Ads e outras plataformas nos seus clientes para ver CTR, ROAS, gasto e leads aqui.
+              Vincule Meta Ads, Google Ads e outras plataformas nas suas empresas para ver CTR, ROAS, gasto e leads aqui.
             </p>
           </div>
           <Link
-            href="/clients"
+            href="/companies"
             className="shrink-0 text-xs font-semibold text-[var(--color-primary)] hover:underline"
           >
-            Ir para clientes →
+            Ir para empresas →
           </Link>
         </div>
       )}

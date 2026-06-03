@@ -34,8 +34,8 @@ export default async function AdminDashboardPage() {
       color: 'from-blue-500 to-indigo-600',
     },
     {
-      label: 'Clientes Gerenciados',
-      value: stats?.totalClients ?? '—',
+      label: 'Empresas Gerenciadas',
+      value: stats?.totalCompanies ?? '—',
       sub: 'em todas as agências',
       icon: Activity,
       color: 'from-violet-500 to-purple-600',
@@ -151,15 +151,15 @@ export default async function AdminDashboardPage() {
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-white/40" />
-              <h2 className="text-sm font-bold text-white">Top Agências por Clientes</h2>
+              <h2 className="text-sm font-bold text-white">Top Agências por Empresas</h2>
             </div>
             <Link href="/admin-panel/agencies" className="text-xs text-indigo-400 hover:text-indigo-300 font-medium">
               Ver todas →
             </Link>
           </div>
-          {stats?.topAgenciesByClients && stats.topAgenciesByClients.length > 0 ? (
+          {stats?.topAgenciesByCompanies && stats.topAgenciesByCompanies.length > 0 ? (
             <div className="space-y-3">
-              {stats.topAgenciesByClients.map((agency) => (
+              {stats.topAgenciesByCompanies.map((agency) => (
                 <Link
                   key={agency.id}
                   href={`/admin-panel/agencies/${agency.id}`}
@@ -169,7 +169,7 @@ export default async function AdminDashboardPage() {
                     <p className="text-sm font-semibold text-white">{agency.name}</p>
                     <p className="text-xs text-white/30">{tenantHostname(agency.slug)}</p>
                   </div>
-                  <span className="text-sm font-bold text-indigo-400">{agency.clientCount} clientes</span>
+                  <span className="text-sm font-bold text-indigo-400">{agency.companyCount} empresas</span>
                 </Link>
               ))}
             </div>
