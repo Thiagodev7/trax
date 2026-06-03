@@ -4,7 +4,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_BASE_DOMAIN: z.string().default('traxsolucoes.com.br'),
   API_URL: z.string().url().default('http://localhost:3000'),
   NEXTAUTH_URL: z.string().url().optional(),
-  AUTH_SECRET: z.string().min(1),
+  AUTH_SECRET: z.string().min(1).optional(), // Optional at build time, NextAuth enforces it at runtime
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
