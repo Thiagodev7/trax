@@ -56,8 +56,15 @@ const REDIS_PREFIX = 'oauth:meta:pending:';
 
 const META_ADS_SCOPES = ['ads_read', 'ads_management', 'business_management'];
 
-/** Page + Instagram Business (token da Page; IG vinculado à Page) — sem escopos instagram_* deprecados */
-const META_PAGES_SCOPES = ['pages_show_list', 'pages_read_engagement'];
+const META_PAGES_SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts'];
+
+const META_INSTAGRAM_SCOPES = [
+  'pages_show_list',
+  'pages_read_engagement',
+  'instagram_basic',
+  'instagram_manage_insights',
+  'instagram_content_publish',
+];
 
 export type MetaScopeGroup = 'ads' | 'pages' | 'instagram' | 'all';
 
@@ -66,10 +73,11 @@ function scopesForGroup(scopeGroup: MetaScopeGroup): string[] {
     case 'ads':
       return [...META_ADS_SCOPES];
     case 'pages':
-    case 'instagram':
       return [...META_PAGES_SCOPES];
+    case 'instagram':
+      return [...META_INSTAGRAM_SCOPES];
     case 'all':
-      return [...new Set([...META_ADS_SCOPES, ...META_PAGES_SCOPES])];
+      return [...new Set([...META_ADS_SCOPES, ...META_PAGES_SCOPES, ...META_INSTAGRAM_SCOPES])];
     default:
       return [...META_ADS_SCOPES];
   }

@@ -48,7 +48,7 @@ export class FacebookPageService {
     since?: string,
     until?: string,
   ): Promise<Array<Record<string, unknown>>> {
-    const metrics = ['page_impressions', 'page_reach', 'page_engaged_users', 'page_fans'];
+    const metrics = ['page_impressions', 'page_reach', 'page_engaged_users'];
     const params: Record<string, string> = {
       metric: metrics.join(','),
       period,
